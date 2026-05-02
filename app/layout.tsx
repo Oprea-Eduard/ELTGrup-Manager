@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ReactQueryProvider } from "@/src/components/providers/react-query-provider";
 import { HeroUIRouterProvider } from "@/src/components/providers/heroui-provider";
+import { ThemeProvider } from "@/src/components/providers/theme-provider";
 import "./globals.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -48,12 +49,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
-        <HeroUIRouterProvider>
-          <ReactQueryProvider>
-            {children}
-            <Toaster richColors position="top-right" />
-          </ReactQueryProvider>
-        </HeroUIRouterProvider>
+        <ThemeProvider>
+          <HeroUIRouterProvider>
+            <ReactQueryProvider>
+              {children}
+              <Toaster richColors position="top-right" />
+            </ReactQueryProvider>
+          </HeroUIRouterProvider>
+        </ThemeProvider>
         <SpeedInsights />
       </body>
     </html>

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { ActivityTimeline } from "@/src/components/ui/activity-timeline";
 import { Badge } from "@/src/components/ui/badge";
+import { Breadcrumbs } from "@/src/components/ui/breadcrumbs";
 import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
@@ -268,6 +269,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
       <div className="space-y-6">
+        <Breadcrumbs items={[
+          { label: "Proiecte", href: "/proiecte" },
+          { label: `${project.code} — ${project.title}` },
+        ]} />
         <PageHeader
           title={project.title}
           subtitle={`${project.code} • ${project.client.name} • ${project.siteAddress}`}

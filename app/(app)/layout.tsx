@@ -4,6 +4,7 @@ import { EmptyState } from "@/src/components/ui/empty-state";
 import { Sidebar } from "@/src/components/layout/sidebar";
 import { Topbar } from "@/src/components/layout/topbar";
 import { GlobalCommandPalette } from "@/src/components/layout/command-palette";
+import { KeyboardShortcuts } from "@/src/components/layout/keyboard-shortcuts";
 import { auth } from "@/src/lib/auth";
 import { getVisibleModules } from "@/src/lib/access-control";
 
@@ -36,6 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen overflow-x-clip bg-[var(--background)] text-[color:var(--foreground)]">
       <GlobalCommandPalette />
+      <KeyboardShortcuts />
       <div className="mx-auto min-h-screen w-full max-w-[1980px] lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
         <Sidebar visibleModules={visibleModules} />
         <div className="relative min-h-screen min-w-0 lg:border-l lg:border-[var(--border)]/70">
