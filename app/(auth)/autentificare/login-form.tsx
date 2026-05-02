@@ -69,18 +69,18 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-[#cfdbed]">Email</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--foreground)]">Email</label>
         <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required autoComplete="username" autoFocus />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-[#cfdbed]">Parola</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--foreground)]">Parola</label>
         <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required autoComplete="current-password" />
       </div>
-      {error ? <p className="text-sm text-[#ffb4bd]">{error}</p> : null}
+      {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Se autentifica..." : "Autentificare"}
       </Button>
-      <p className="text-center text-xs text-[#84a4c5]">Suport tehnic: administrator ELTGRUP</p>
+      <p className="text-center text-xs text-[var(--muted)]">Suport tehnic: administrator ELTGRUP</p>
     </form>
   );
 }

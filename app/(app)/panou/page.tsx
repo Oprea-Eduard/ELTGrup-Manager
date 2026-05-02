@@ -407,7 +407,7 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
                 <span className="text-[var(--muted-strong)]">Acceptate (in conversie)</span>
-                <span className="font-semibold text-emerald-400">{offersAccepted}</span>
+                <span className="font-semibold text-[var(--success)]">{offersAccepted}</span>
               </div>
               <Link
                 href="/oferte"

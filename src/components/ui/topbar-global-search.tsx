@@ -280,7 +280,7 @@ export function TopbarGlobalSearch({
 
   return (
     <form onSubmit={onSubmit} className={cn("relative", className)}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7f93ab]" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
       <Input
         ref={inputRef}
         value={query}
@@ -290,7 +290,7 @@ export function TopbarGlobalSearch({
         onKeyDown={onKeyDown}
         placeholder={placeholder || "Cauta in modulul activ sau foloseste proiect:, lucrare:, client:, document:, financiar:"}
         className={cn(
-          "h-10 rounded-lg border-[var(--border)] bg-[linear-gradient(180deg,rgba(20,31,45,0.95),rgba(15,25,37,0.95))] pl-9 pr-28",
+          "h-10 rounded-lg border-[var(--border)] bg-[linear-gradient(180deg,color-mix(in oklab,var(--surface) 95%,transparent),color-mix(in oklab,var(--surface) 95%,transparent))] pl-9 pr-28",
           inputClassName,
         )}
       />
@@ -298,7 +298,7 @@ export function TopbarGlobalSearch({
         <button
           type="button"
           onClick={() => setQuery("")}
-          className="absolute right-[4.4rem] top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-[var(--border)] bg-[rgba(15,24,34,0.9)] text-[var(--muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+          className="absolute right-[4.4rem] top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-[var(--border)] bg-[color-mix(in oklab,var(--surface) 90%,transparent)] text-[var(--muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
           aria-label="Curata cautarea"
         >
           <X className="h-3.5 w-3.5" />
@@ -306,14 +306,14 @@ export function TopbarGlobalSearch({
       ) : null}
       <button
         type="submit"
-        className="absolute right-1.5 top-1/2 inline-flex h-7 -translate-y-1/2 items-center rounded-md border border-[var(--border)] bg-[rgba(15,24,34,0.85)] px-2.5 text-[11px] font-semibold text-[var(--muted-strong)] transition hover:border-[var(--border-strong)]"
+        className="absolute right-1.5 top-1/2 inline-flex h-7 -translate-y-1/2 items-center rounded-md border border-[var(--border)] bg-[color-mix(in oklab,var(--surface) 85%,transparent)] px-2.5 text-[11px] font-semibold text-[var(--muted-strong)] transition hover:border-[var(--border-strong)]"
       >
         Cauta
       </button>
       {showDropdown && (
         <ul
           ref={listRef}
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-[var(--border)] bg-[rgba(15,25,37,0.98)] p-1 shadow-xl backdrop-blur-sm"
+          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-[var(--border)] bg-[color-mix(in oklab,var(--background) 98%,transparent)] p-1 shadow-xl backdrop-blur-sm"
         >
           {highlightResults.length === 0 ? (
             <li className="px-3 py-4 text-center text-sm text-[var(--muted)]">
@@ -328,14 +328,14 @@ export function TopbarGlobalSearch({
                 className={cn(
                   "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                   index === selectedIndex
-                    ? "bg-[rgba(59,130,246,0.15)] text-[var(--foreground)]"
-                    : "text-[var(--muted-strong)] hover:bg-[rgba(59,130,246,0.08)]",
+                    ? "bg-[color-mix(in oklab,var(--accent)_15%,transparent)] text-[var(--foreground)]"
+                    : "text-[var(--muted-strong)] hover:bg-[color-mix(in oklab,var(--accent)_8%,transparent)]",
                 )}
               >
                 <span className="truncate">
                   {item.highlighted.map((part, i) =>
                     part.highlight ? (
-                      <mark key={i} className="rounded-sm bg-[rgba(59,130,246,0.3)] px-0.5 text-[var(--foreground)]">
+                      <mark key={i} className="rounded-sm bg-[color-mix(in oklab,var(--accent)_30%,transparent)] px-0.5 text-[var(--foreground)]">
                         {part.char}
                       </mark>
                     ) : (

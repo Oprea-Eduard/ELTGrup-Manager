@@ -41,13 +41,13 @@ export async function Topbar({
   const roleLabel = formatRoleLabels(user.roleKeys);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[linear-gradient(180deg,rgba(11,17,24,0.96),rgba(9,15,22,0.92))] px-3 py-2.5 backdrop-blur-xl sm:px-5 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[linear-gradient(180deg,color-mix(in oklab,var(--background) 96%,transparent),color-mix(in oklab,var(--background) 92%,transparent))] px-3 py-2.5 backdrop-blur-xl sm:px-5 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <MobileNavDrawer visibleModules={visibleModules} />
 
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#8dc1f5]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-strong)]" />
             Consola operationala
           </p>
           <p className="truncate text-sm font-semibold text-[var(--foreground)]">ELTGRUP Manager</p>
@@ -61,7 +61,7 @@ export async function Topbar({
 
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-2.5 py-1.5 text-xs text-[var(--muted-strong)] lg:flex">
-            <CalendarClock className="h-3.5 w-3.5 text-[#9cb5d2]" />
+            <CalendarClock className="h-3.5 w-3.5 text-[var(--muted)]" />
             <span>{todayLabel}</span>
           </div>
 
@@ -73,7 +73,7 @@ export async function Topbar({
             >
               <Bell className="h-4 w-4" />
               {unreadNotifications > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border border-[#7f2b38] bg-[#ad4350] px-1 text-[10px] font-semibold text-white">
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border border-[color-mix(in oklab,var(--danger) 60%,var(--shell) 40%)] bg-[var(--danger)] px-1 text-[10px] font-semibold text-[var(--foreground)]">
                   {unreadNotifications}
                 </span>
               ) : null}
@@ -98,7 +98,7 @@ export async function Topbar({
           <Link
             key={item.href}
             href={item.href}
-            className="inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[linear-gradient(180deg,rgba(22,35,50,0.94),rgba(16,27,40,0.94))] px-3 text-xs font-semibold text-[var(--muted-strong)]"
+            className="inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[linear-gradient(180deg,color-mix(in oklab,var(--surface) 94%,transparent),color-mix(in oklab,var(--surface) 94%,transparent))] px-3 text-xs font-semibold text-[var(--muted-strong)]"
           >
             {item.label}
           </Link>

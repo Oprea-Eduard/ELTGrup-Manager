@@ -2,13 +2,13 @@ import type { ReactNode } from "react";
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
-    <header className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.95),rgba(15,25,37,0.95))] px-4 py-4 shadow-[var(--shadow-panel)] sm:px-5">
-      <div className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-[rgba(133,173,219,0.11)] blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-20 left-6 h-28 w-48 rounded-full bg-[rgba(87,123,167,0.13)] blur-2xl" />
+    <header className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,color-mix(in oklab,var(--surface) 95%,transparent),color-mix(in oklab,var(--surface) 95%,transparent))] px-4 py-4 shadow-[var(--shadow-panel)] sm:px-5">
+      <div className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-[color-mix(in oklab,var(--accent)_11%,transparent)] blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-6 h-28 w-48 rounded-full bg-[color-mix(in oklab,var(--accent)_13%,transparent)] blur-2xl" />
       <div className="relative mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
         <div className="flex items-center gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">ELTGRUP Operational Suite</p>
-          <span className="inline-flex h-5 items-center rounded-full border border-[rgba(93,147,200,0.5)] bg-[rgba(58,94,133,0.24)] px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#bfd7f4]">
+          <span className="inline-flex h-5 items-center rounded-full border border-[color-mix(in oklab,var(--accent)_50%,transparent)] bg-[color-mix(in oklab,var(--accent)_24%,transparent)] px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--accent-strong)]">
             Live
           </span>
         </div>
