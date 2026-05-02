@@ -7,6 +7,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Input } from "@/src/components/ui/input";
+import { ListItemSlim } from "@/src/components/ui/list-item";
 import { initialActionState } from "@/src/lib/action-state";
 import { cleanupDemoDataAction, createUserAction, deleteUserAction, toggleUserActiveAction, updateUserRolesAction } from "./actions";
 
@@ -142,12 +143,12 @@ export function UserAdminPanel({
         <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Rolul activ al fiecarui cont</h2>
         <div className="mt-3 space-y-3">
           {users.length === 0 ? (
-            <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+            <ListItemSlim className="text-[var(--muted)]">
               Nu exista utilizatori disponibili in acest mediu.
-            </p>
+            </ListItemSlim>
           ) : null}
           {users.map((user) => (
-            <div key={user.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+            <div key={user.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="font-semibold text-[var(--foreground)]">{user.firstName} {user.lastName}</p>

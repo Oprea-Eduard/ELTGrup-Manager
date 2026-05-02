@@ -6,6 +6,7 @@ import { ActivityTimeline } from "@/src/components/ui/activity-timeline";
 import { Badge } from "@/src/components/ui/badge";
 import { Breadcrumbs } from "@/src/components/ui/breadcrumbs";
 import { Card } from "@/src/components/ui/card";
+import { ListItem, ListItemSlim } from "@/src/components/ui/list-item";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { assertProjectAccess } from "@/src/lib/access-scope";
@@ -329,17 +330,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari active</h2>
             <div className="mt-3 space-y-2">
               {project.workOrders.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                <ListItemSlim className="text-[var(--muted)]">
                   Nu exista lucrari active pe acest proiect.
-                </p>
+                </ListItemSlim>
               ) : null}
               {project.workOrders.map((task) => (
-                <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                <ListItemSlim key={task.id} className="flex-col items-start gap-1">
                   <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
                   <p className="text-xs text-[#a0b3ce]">
                     Status {task.status} • Prioritate {task.priority} • Termen {task.dueDate ? formatDate(task.dueDate) : "-"}
                   </p>
-                </div>
+                </ListItemSlim>
               ))}
             </div>
           </Card>
@@ -348,9 +349,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Faze proiect</h2>
             <div className="mt-3 space-y-2">
               {project.phases.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                <ListItemSlim className="text-[var(--muted)]">
                   Nu exista faze definite pentru acest proiect.
-                </p>
+                </ListItemSlim>
               ) : null}
               {project.phases.map((phase) => {
                   const phaseTypeLabels: Record<string, string> = {
@@ -364,12 +365,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     MENTENANTA: "Mentenanta",
                   };
                   return (
-                    <div key={phase.id} className={`rounded-xl border bg-[var(--surface-card)] p-3 text-sm ${phase.completed ? "border-[rgba(79,156,118,0.35)]" : "border-[var(--border)]/70"}`}>
+                    <ListItemSlim key={phase.id} className={`flex-col items-start gap-1.5 ${phase.completed ? "border-l-2 border-l-[rgba(79,156,118,0.5)]" : ""}`}>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono text-[var(--muted)]">{String(phase.position).padStart(2, "0")}</span>
                         <p className="font-semibold text-[var(--foreground)]">{phase.title}</p>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${phase.completed ? "bg-[rgba(79,156,118,0.18)] text-[#bde7cf]" : phase.type === "AVIZ_ISU" ? "bg-[rgba(190,95,111,0.18)] text-[#f6c7cf]" : "bg-[rgba(94,134,190,0.18)] text-[#cadcf7]"}`}>
                           {phaseTypeLabels[phase.type] || phase.type}
                         </span>
@@ -387,7 +388,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                           </span>
                         ) : null}
                       </div>
-                    </div>
+                    </ListItemSlim>
                   );
                 })}
             </div>
@@ -407,15 +408,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               Deschide gestiune scule
             </Link>
           </div>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-1">
             {project.inventoryAssignments.length === 0 ? (
-              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+              <ListItemSlim className="text-[var(--muted)]">
                 Nu exista scule active alocate pe acest proiect.
-              </p>
+              </ListItemSlim>
             ) : null}
             {project.inventoryAssignments.map((assignment) => (
-              <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <ListItemSlim key={assignment.id} className="flex-col items-start gap-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 w-full">
                   <p className="font-semibold text-[var(--foreground)]">
                     {assignment.item.name} ({assignment.item.internalCode})
                   </p>
@@ -423,13 +424,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     {inventoryItemStatusLabels[assignment.item.status]}
                   </Badge>
                 </div>
-                <p className="mt-1 text-xs text-[var(--muted)]">
+                <p className="text-xs text-[var(--muted)]">
                   Predat catre {assignment.issuedToUser.firstName} {assignment.issuedToUser.lastName} • Cantitate {Number(assignment.quantity).toFixed(2)} {assignment.item.unitOfMeasure}
                 </p>
                 <p className="text-xs text-[var(--muted)]">
                   Disponibil in stoc: {Number(assignment.item.quantityAvailable).toFixed(2)} {assignment.item.unitOfMeasure}
                 </p>
-              </div>
+              </ListItemSlim>
             ))}
           </div>
         </Card>
@@ -442,21 +443,21 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <p className="mt-1 text-sm text-[var(--muted)]">Echipamente instalate, certificari si urmatoare verificari.</p>
               </div>
             </div>
-            <div className="mt-3 space-y-2">
-              {project.installations.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                  Nu exista instalatii inregistrate pe acest proiect.
-                </p>
-              ) : null}
-              {project.installations.map((inst) => (
-                <div key={inst.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="truncate font-semibold text-[var(--foreground)]">{inst.name}</p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {inst.manufacturer} {inst.model || ""} {inst.serialNumber ? `| S/N ${inst.serialNumber}` : ""}
-                      </p>
-                    </div>
+          <div className="mt-3 space-y-1">
+            {project.installations.length === 0 ? (
+              <ListItemSlim className="text-[var(--muted)]">
+                Nu exista instalatii inregistrate pe acest proiect.
+              </ListItemSlim>
+            ) : null}
+            {project.installations.map((inst) => (
+              <div key={inst.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="truncate font-semibold text-[var(--foreground)]">{inst.name}</p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {inst.manufacturer} {inst.model || ""} {inst.serialNumber ? `| S/N ${inst.serialNumber}` : ""}
+                    </p>
+                  </div>
                     <Badge tone={
                       inst.status === InstallationStatus.CERTIFIED ? "success" :
                       inst.status === InstallationStatus.INSTALLED ? "info" :

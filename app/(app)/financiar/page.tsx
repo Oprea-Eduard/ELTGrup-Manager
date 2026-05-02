@@ -4,6 +4,7 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { ListItemSlim } from "@/src/components/ui/list-item";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { FormModal } from "@/src/components/forms/form-modal";
 import { PageHeader } from "@/src/components/ui/page-header";
@@ -284,9 +285,9 @@ export default async function FinanciarPage({
           {invoices.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--muted)]">Nu exista facturi pentru filtrele curente.</p>
           ) : (
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1">
               {invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[#dee8f8]">
+                <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[#dee8f8]">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">{invoice.invoiceNumber} • {invoice.project.title} • {invoice.client.name}</span>
                     <span className="font-semibold text-[var(--foreground)]">{formatCurrency(invoice.totalAmount.toString())}</span>
@@ -351,7 +352,7 @@ export default async function FinanciarPage({
               <p className="text-sm text-[var(--muted)]">Nu exista costuri recente in aria ta.</p>
             ) : (
               recentCostEntries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[#dde8f8]">
+                <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[#dde8f8]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-[var(--foreground)]">{entry.description}</p>
@@ -382,18 +383,18 @@ export default async function FinanciarPage({
         <Card>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Marje</p>
           <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Cashflow si marja estimata pe proiect</h2>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-1">
             {projects.length === 0 ? (
-              <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+              <ListItemSlim className="text-[var(--muted)]">
                 Nu exista proiecte in aria ta pentru calculul de marja.
-              </p>
+              </ListItemSlim>
             ) : null}
             {projects.map((project) => {
               const costTotal = costByProject.get(project.id) || 0;
               const invoiced = invoicedByProject.get(project.id) || 0;
               const margin = invoiced - costTotal;
               return (
-                <div key={project.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[#dde8f8]">
+                <div key={project.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[#dde8f8]">
                   <p className="font-semibold text-[var(--foreground)]">{project.title}</p>
                   <p className="text-xs text-[var(--muted)]">Cost: {formatCurrency(costTotal)} • Facturat: {formatCurrency(invoiced)} • Marja: {formatCurrency(margin)}</p>
                 </div>

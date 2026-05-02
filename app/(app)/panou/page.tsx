@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Card } from "@/src/components/ui/card";
 import { KpiCard } from "@/src/components/ui/kpi-card";
+import { ListItem, ListItemSlim } from "@/src/components/ui/list-item";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { DashboardScheduleTable } from "@/src/components/dashboard/schedule-table";
 import { auth } from "@/src/lib/auth";
@@ -353,18 +354,18 @@ export default async function DashboardPage() {
               <ClientProductivityChart data={chartData} />
             </div>
             <div className="grid gap-2 border-t border-[var(--border)] px-5 py-4 md:grid-cols-3">
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">
+              <ListItem className="flex-col items-start gap-1">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Ritm executie</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{todaySchedule.length} taskuri planificate azi</p>
-              </div>
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">
+                <p className="text-sm font-semibold text-[var(--foreground)]">{todaySchedule.length} taskuri planificate azi</p>
+              </ListItem>
+              <ListItem className="flex-col items-start gap-1">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Flux financiar</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{formatCurrency(receivables)} neincasat</p>
-              </div>
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">
+                <p className="text-sm font-semibold text-[var(--foreground)]">{formatCurrency(receivables)} neincasat</p>
+              </ListItem>
+              <ListItem className="flex-col items-start gap-1">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Aprobari materiale</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{pendingMaterialApprovals} in asteptare</p>
-              </div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">{pendingMaterialApprovals} in asteptare</p>
+              </ListItem>
             </div>
           </Card>
 
@@ -373,18 +374,18 @@ export default async function DashboardPage() {
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele miscari in sistem</h2>
             <div className="mt-3 space-y-2">
               {latestActivities.length === 0 ? (
-                <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                <ListItemSlim className="text-[var(--muted)]">
                   Nu exista activitate recenta in aria ta de acces.
-                </p>
+                </ListItemSlim>
               ) : null}
               {latestActivities.map((log) => (
-                <div key={log.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">
+                <ListItemSlim key={log.id} className="flex-col items-start gap-1">
                   <p className="text-sm font-semibold text-[var(--foreground)]">{log.action}</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
+                  <p className="text-xs text-[var(--muted)]">
                     {fullName(log.user?.firstName, log.user?.lastName)} • {log.entityType} #{log.entityId.slice(-6)}
                   </p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">{formatDate(log.createdAt)}</p>
-                </div>
+                  <p className="text-xs text-[var(--muted)]">{formatDate(log.createdAt)}</p>
+                </ListItemSlim>
               ))}
             </div>
           </Card>
@@ -396,19 +397,19 @@ export default async function DashboardPage() {
           <Card>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Pipeline comercial</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Oferte tehnice</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+            <div className="mt-3 space-y-1 text-sm">
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Draft (in lucru)</span>
                 <span className="font-semibold text-[var(--foreground)]">{offersDraft}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Trimise la client</span>
                 <span className="font-semibold text-[var(--foreground)]">{offersSent}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Acceptate (in conversie)</span>
                 <span className="font-semibold text-[var(--success)]">{offersAccepted}</span>
-              </div>
+              </ListItem>
               <Link
                 href="/oferte"
                 className="mt-2 inline-block text-xs text-[var(--accent)] hover:underline"
@@ -431,9 +432,8 @@ export default async function DashboardPage() {
                     ? Math.ceil((new Date(phase.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                     : null;
                   return (
-                    <div
+                    <ListItem
                       key={project.id}
-                      className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2"
                     >
                       <div className="min-w-0">
                         <p className="truncate font-medium text-[var(--foreground)]">
@@ -451,7 +451,7 @@ export default async function DashboardPage() {
                       >
                         Deschide
                       </Link>
-                    </div>
+                    </ListItem>
                   );
                 })
               )}
@@ -461,58 +461,58 @@ export default async function DashboardPage() {
           <Card>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status proiecte</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Portofoliu proiecte</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+            <div className="mt-3 space-y-1 text-sm">
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Planificate</span>
                 <span className="font-semibold text-[var(--foreground)]">{plannedProjects}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Active</span>
                 <span className="font-semibold text-[var(--foreground)]">{activeProjects}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Blocate</span>
                 <span className="font-semibold text-[var(--foreground)]">{blockedProjects}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Finalizate</span>
                 <span className="font-semibold text-[var(--foreground)]">{completedProjects}</span>
-              </div>
+              </ListItem>
             </div>
           </Card>
 
           <Card>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status echipe</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Task si echipe</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+            <div className="mt-3 space-y-1 text-sm">
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Taskuri TODO</span>
                 <span className="font-semibold text-[var(--foreground)]">{todoOrders}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">In progres</span>
                 <span className="font-semibold text-[var(--foreground)]">{inProgressOrders}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Blocate</span>
                 <span className="font-semibold text-[var(--foreground)]">{blockedOrders}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+              </ListItem>
+              <ListItem>
                 <span className="text-[var(--muted-strong)]">Pontaj activ</span>
                 <span className="font-semibold text-[var(--foreground)]">{clockedIn}</span>
-              </div>
+              </ListItem>
             </div>
           </Card>
 
           <Card>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Focus pe rol</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Prioritati pentru rolul tau</h2>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1">
               {roleContext.focus.map((item, index) => (
-                <div key={item} className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[var(--muted-strong)]">
-                  <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Prioritate {index + 1}</p>
-                  <p>{item}</p>
-                </div>
+                <ListItem key={item} className="flex-col items-start gap-1">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Prioritate {index + 1}</p>
+                  <p className="text-[var(--muted-strong)]">{item}</p>
+                </ListItem>
               ))}
             </div>
           </Card>

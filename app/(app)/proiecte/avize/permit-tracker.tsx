@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PermitApplicationStatus, PermitType } from "@prisma/client";
 import { Card } from "@/src/components/ui/card";
+import { ListItemSlim } from "@/src/components/ui/list-item";
 
 const statusLabels: Record<PermitApplicationStatus, string> = {
   SUBMITTED: "Depus",
@@ -92,10 +93,10 @@ export function PermitTracker({ permits, projectId }: { permits: Permit[]; proje
             <div key={type} className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">{typeLabels[type]}</p>
               {items.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-2.5 text-[11px] text-[var(--muted)]">Niciun aviz înregistrat.</p>
+                <ListItemSlim className="text-[var(--muted)]">Niciun aviz înregistrat.</ListItemSlim>
               ) : (
                 items.map((permit) => (
-                  <div key={permit.id} className="flex items-center justify-between rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-2.5 text-sm">
+                  <div key={permit.id} className="flex items-center justify-between rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-2.5 text-sm">
                     <div className="min-w-0 space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusColors[permit.status]}`}>

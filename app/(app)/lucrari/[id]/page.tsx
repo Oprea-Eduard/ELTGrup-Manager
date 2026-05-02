@@ -5,6 +5,7 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { ActivityTimeline } from "@/src/components/ui/activity-timeline";
 import { Badge } from "@/src/components/ui/badge";
 import { Card } from "@/src/components/ui/card";
+import { ListItemSlim } from "@/src/components/ui/list-item";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { assertWorkOrderAccess } from "@/src/lib/access-scope";
@@ -144,10 +145,10 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
                       ) : null}
                     </div>
                     {items.length === 0 ? (
-                      <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-2.5 text-[11px] text-[var(--muted)]">Niciun punct de control.</p>
+                      <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-2.5 text-[11px] text-[var(--muted)]">Niciun punct de control.</p>
                     ) : (
                       items.map((item) => (
-                        <form key={item.id} action={toggleChecklistItem} className="flex items-start gap-2 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-2.5 text-sm">
+                        <form key={item.id} action={toggleChecklistItem} className="flex items-start gap-2 rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-2.5 text-sm">
                           <input type="hidden" name="id" value={item.id} />
                           <input type="hidden" name="workOrderId" value={workOrder.id} />
                           <input type="hidden" name="done" value={item.isDone ? "false" : "true"} />
@@ -168,31 +169,31 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
         <section className="grid gap-4 xl:grid-cols-3">
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Comentarii / update-uri</h2>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1">
               {workOrder.comments.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                <ListItemSlim className="text-[var(--muted)]">
                   Nu exista comentarii pe aceasta lucrare.
-                </p>
+                </ListItemSlim>
               ) : null}
               {workOrder.comments.map((comment) => (
-                <div key={comment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                <ListItemSlim key={comment.id} className="flex-col items-start gap-1">
                   <p className="text-[var(--muted-strong)]">{comment.content}</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">{comment.user.firstName} {comment.user.lastName} • {formatDateTime(comment.createdAt)}</p>
-                </div>
+                  <p className="text-xs text-[var(--muted)]">{comment.user.firstName} {comment.user.lastName} • {formatDateTime(comment.createdAt)}</p>
+                </ListItemSlim>
               ))}
             </div>
           </Card>
 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Documente / foto</h2>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1">
               {workOrder.documents.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                <ListItemSlim className="text-[var(--muted)]">
                   Nu exista documente sau fotografii incarcate.
-                </p>
+                </ListItemSlim>
               ) : null}
               {workOrder.documents.map((doc) => (
-                <a key={doc.id} href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="block rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm hover:border-[var(--border-strong)]">
+                <a key={doc.id} href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="block rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3 text-sm hover:border-[var(--border-strong)]">
                   <p className="font-semibold text-[var(--foreground)]">{doc.title}</p>
                   <p className="text-xs text-[var(--muted)]">{doc.category} • {doc.fileName}</p>
                 </a>
@@ -202,18 +203,18 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Aprobari si ore</h2>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1">
               {workOrder.timeEntries.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                <ListItemSlim className="text-[var(--muted)]">
                   Nu exista inregistrari de pontaj pe aceasta lucrare.
-                </p>
+                </ListItemSlim>
               ) : null}
               {workOrder.timeEntries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                <ListItemSlim key={entry.id} className="flex-col items-start gap-1">
                   <p className="font-semibold text-[var(--foreground)]">{entry.user.firstName} {entry.user.lastName}</p>
                   <p className="text-xs text-[var(--muted)]">{formatDateTime(entry.startAt)} - {entry.endAt ? formatDateTime(entry.endAt) : "in curs"}</p>
                   <p className="text-xs text-[var(--muted)]">Status: {entry.status} • {Math.round(entry.durationMinutes / 60)}h</p>
-                </div>
+                </ListItemSlim>
               ))}
             </div>
           </Card>

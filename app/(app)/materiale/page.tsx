@@ -452,7 +452,7 @@ export default async function MaterialePage({
                     href={doc.storagePath}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="block rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm transition-colors hover:border-[var(--border-strong)]"
+                    className="block rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--surface)]"
                   >
                     <p className="font-semibold text-[var(--foreground)]">{doc.title}</p>
                     <p className="text-xs text-[var(--muted)]">
@@ -711,7 +711,7 @@ export default async function MaterialePage({
                 <EmptyState title="Nicio miscare recenta" description="Inca nu exista miscari de stoc inregistrate." />
               ) : (
                 recentMovements.map((movement) => (
-                  <div key={movement.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm">
+                  <div key={movement.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -778,10 +778,10 @@ export default async function MaterialePage({
               <p className="mt-3 text-sm text-[var(--muted)]">Aprobarea cererilor este disponibila doar pentru rolurile cu drept de aprobare materiale.</p>
             )}
 
-            <div className="mt-4 space-y-3">
+              <div className="mt-4 space-y-1">
               {pendingRequests.length > 0 ? (
                 pendingRequests.map((request) => (
-                  <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm">
+                  <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="font-semibold text-[var(--foreground)]">{request.project.title}</p>
@@ -853,12 +853,12 @@ export default async function MaterialePage({
                   </div>
                   <Badge tone={historyRequests.length > 0 ? "info" : "neutral"}>{historyRequests.length} in lista</Badge>
                 </div>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 space-y-1">
                   {historyRequests.length === 0 ? (
                     <p className="text-sm text-[var(--muted)]">Nu exista cereri pentru filtrul selectat.</p>
                   ) : (
                     historyRequests.map((request) => (
-                      <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm">
+                      <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
                             <p className="font-semibold text-[var(--foreground)]">{request.project.title}</p>
