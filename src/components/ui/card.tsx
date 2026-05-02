@@ -6,7 +6,7 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <HeroCard
       className={cn(
-        "surface-interactive relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-4 shadow-[var(--shadow-panel)] sm:p-5",
+        "rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-4 sm:p-5",
         className,
       )}
     >
