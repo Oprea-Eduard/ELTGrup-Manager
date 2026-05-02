@@ -6,6 +6,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 
+let loginAttempts = 0;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+let loginWindowStart = Date.now();
+
+function checkLoginRateLimit() {
+  const now = Date.now();
+  if (now - loginWindowStart > LOGIN_WINDOW_MS) {
+    loginAttempts = 0;
+    loginWindowStart = now;
+  }
+  loginAttempts++;
+  if (loginAttempts > MAX_LOGIN_ATTEMPTS) {
+    const retryAfter = Math.ceil((LOGIN_WINDOW_MS - (now - loginWindowStart)) / 1000 / 60);
+    throw new Error(`Prea multe incercari. Reincearca in ${retryAfter} minute.`);
+  }
+}
+
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +36,14 @@ export function LoginForm() {
     event.preventDefault();
     setLoading(true);
     setError("");
+
+    try {
+      checkLoginRateLimit();
+    } catch (e) {
+      setError((e as Error).message);
+      setLoading(false);
+      return;
+    }
 
     const result = await signIn("credentials", {
       email: email.trim().toLowerCase(),

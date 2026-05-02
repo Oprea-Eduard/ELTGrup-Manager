@@ -1,6 +1,6 @@
 "use server";
 
-import { CostType, InvoiceStatus, NotificationType, Prisma, RoleKey } from "@prisma/client";
+import { CostType, InvoiceStatus, NotificationType, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertProjectAccess } from "@/src/lib/access-scope";
@@ -144,23 +144,21 @@ export async function deleteInvoice(formData: FormData) {
       invoiceNumber: true,
       status: true,
       totalAmount: true,
+      deletedAt: true,
     },
   });
   if (!invoice) {
     throw new Error("Factura nu exista sau a fost deja stearsa.");
   }
+  if (invoice.deletedAt) {
+    throw new Error("Factura a fost deja stearsa.");
+  }
   await assertProjectAccess(currentUser, invoice.projectId);
 
-  try {
-    await prisma.invoice.delete({
-      where: { id: invoice.id },
-    });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-      throw new Error("Factura nu poate fi stearsa deoarece este legata de alte inregistrari.");
-    }
-    throw error;
-  }
+  await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: { deletedAt: new Date() },
+  });
 
   await logActivity({
     userId: currentUser.id,
@@ -197,23 +195,21 @@ export async function deleteCostEntry(formData: FormData) {
       description: true,
       amount: true,
       occurredAt: true,
+      deletedAt: true,
     },
   });
   if (!costEntry) {
     throw new Error("Costul nu exista sau a fost deja sters.");
   }
+  if (costEntry.deletedAt) {
+    throw new Error("Costul a fost deja sters.");
+  }
   await assertProjectAccess(currentUser, costEntry.projectId);
 
-  try {
-    await prisma.costEntry.delete({
-      where: { id: costEntry.id },
-    });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-      throw new Error("Costul nu poate fi sters deoarece este legat de alte inregistrari.");
-    }
-    throw error;
-  }
+  await prisma.costEntry.update({
+    where: { id: costEntry.id },
+    data: { deletedAt: new Date() },
+  });
 
   await logActivity({
     userId: currentUser.id,

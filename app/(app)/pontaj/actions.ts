@@ -6,12 +6,11 @@ import { z } from "zod";
 import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
+import { STANDARD_SHIFT_END_HOUR } from "@/src/lib/constants";
 import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { buildListHref } from "@/src/lib/query-params";
-
-const STANDARD_SHIFT_END_HOUR = 17;
 
 function buildPontajUrl(params: Record<string, string | undefined>) {
   return buildListHref("/pontaj", params);

@@ -9,9 +9,9 @@ import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
 import { formatCurrency, formatDate, fullName } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
-import { ProductivityChart } from "@/src/modules/dashboard/charts";
 import ClientViewerDashboard from "./client-viewer-dashboard";
 import { FgoWidget } from "./fgo-widget";
+import { ClientProductivityChart } from "./client-productivity-chart";
 
 function getPrimaryRole(roleKeys: string[]) {
   const priority: RoleKey[] = [
@@ -350,7 +350,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-[var(--muted)]">Distribuie atentia manageriala pe proiectele cu incarcare ridicata.</p>
             </div>
             <div className="px-4 pb-2 pt-2 sm:px-5">
-              <ProductivityChart data={chartData} />
+              <ClientProductivityChart data={chartData} />
             </div>
             <div className="grid gap-2 border-t border-[var(--border)] px-5 py-4 md:grid-cols-3">
               <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">

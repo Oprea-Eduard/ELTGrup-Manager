@@ -3,9 +3,10 @@
 import { NotificationType, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
+import { resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
+import { assertActiveProjectAccess, loadActiveWorkOrder } from "@/src/lib/shared-helpers";
 import { notifyRoles } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
@@ -39,51 +40,6 @@ function revalidateDailyReportsPaths(input?: { projectId?: string | null; workOr
   revalidatePath("/panou");
   if (input?.projectId) revalidatePath(`/proiecte/${input.projectId}`);
   if (input?.workOrderId) revalidatePath(`/lucrari/${input.workOrderId}`);
-}
-
-async function assertActiveProjectAccess(user: Awaited<ReturnType<typeof requirePermission>>, projectId: string) {
-  await assertProjectAccess(user, projectId);
-
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { deletedAt: true },
-  });
-
-  if (!project || project.deletedAt) {
-    throw new Error("Proiect inexistent sau deja arhivat.");
-  }
-}
-
-async function loadActiveWorkOrder(
-  user: Awaited<ReturnType<typeof requirePermission>>,
-  workOrderId: string,
-  options?: { projectId?: string },
-) {
-  await assertWorkOrderAccess(user, workOrderId, options);
-
-  const workOrder = await prisma.workOrder.findUnique({
-    where: { id: workOrderId },
-    select: { deletedAt: true, projectId: true },
-  });
-
-  if (!workOrder || workOrder.deletedAt) {
-    throw new Error("Lucrare inexistenta sau deja arhivata.");
-  }
-
-  if (options?.projectId && workOrder.projectId !== options.projectId) {
-    throw new Error("Lucrarea selectata nu apartine proiectului selectat.");
-  }
-
-  const project = await prisma.project.findUnique({
-    where: { id: workOrder.projectId },
-    select: { deletedAt: true },
-  });
-
-  if (!project || project.deletedAt) {
-    throw new Error("Proiect inexistent sau deja arhivat.");
-  }
-
-  return workOrder;
 }
 
 async function createDailyReportInternal(formData: FormData) {
@@ -178,7 +134,7 @@ export async function deleteDailyReport(formData: FormData) {
   });
   if (!report) throw new Error("Raportul zilnic nu exista sau a fost deja sters.");
 
-  await assertProjectAccess(currentUser, report.projectId);
+  await assertActiveProjectAccess(currentUser, report.projectId);
 
   await prisma.dailySiteReport.delete({
     where: { id: report.id },

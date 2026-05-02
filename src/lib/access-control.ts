@@ -1,7 +1,26 @@
 import { PermissionAction, PermissionResource, RoleKey } from "@prisma/client";
-import { hasPermission, normalizeRoleKeys } from "./rbac";
+import { hasPermission, normalizeRoleKeys } from "@/src/lib/rbac";
 
-export const appModules = [
+export type AppModule =
+  | "dashboard"
+  | "offers"
+  | "projects"
+  | "work_orders"
+  | "teams"
+  | "calendar"
+  | "time_tracking"
+  | "field"
+  | "materials"
+  | "documents"
+  | "clients"
+  | "reports"
+  | "subcontractors"
+  | "financial"
+  | "analytics"
+  | "notifications"
+  | "settings";
+
+export const appModules: AppModule[] = [
   "dashboard",
   "offers",
   "projects",
@@ -19,9 +38,7 @@ export const appModules = [
   "analytics",
   "notifications",
   "settings",
-] as const;
-
-export type AppModule = (typeof appModules)[number];
+];
 
 export type AuthUserLike = {
   id: string;
@@ -65,9 +82,9 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
     routePrefixes: ["/teren"],
     roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.WORKER],
   },
-  materials: { 
-    resource: "MATERIALS", 
-    action: "VIEW", 
+  materials: {
+    resource: "MATERIALS",
+    action: "VIEW",
     routePrefixes: ["/materiale", "/echipamente", "/gestiune-scule"],
     roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.MAGAZIONER, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE, RoleKey.WORKER],
   },
@@ -200,7 +217,6 @@ export function canAccessPath(user: Pick<AuthUserLike, "roleKeys" | "email">, pa
     return canAccessByPermissionPolicy(user, apiPolicy);
   }
 
-  // Fail closed for non-API app routes to avoid silently exposing new pages.
   if (!normalizedPathname.startsWith("/api/")) {
     return false;
   }

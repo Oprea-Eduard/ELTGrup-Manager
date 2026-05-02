@@ -7,7 +7,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { prisma, basePrisma } from "@/src/lib/prisma";
 
-const JWT_ROLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const JWT_ROLE_SYNC_INTERVAL_MS = 60 * 1000;
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Email invalid"),
@@ -109,6 +109,8 @@ export const authOptions: NextAuthOptions = {
 
         if (!dbUser || !dbUser.isActive || dbUser.deletedAt) {
           token.roleKeys = [];
+          token.userId = "";
+          token.deactivatedAt = Date.now();
           token.roleSyncedAt = Date.now();
           return token;
         }

@@ -3,6 +3,7 @@ import { PermissionAction, PermissionResource } from "@prisma/client";
 import { requirePermission } from "./permissions";
 import { ActionState, fromZodError } from "./action-state";
 import { logActivity } from "./activity-log";
+import { checkRateLimit } from "./rate-limit";
 
 type SafeActionOptions<T extends z.ZodType> = {
   schema?: T;
@@ -40,6 +41,10 @@ export function createSafeAction<T extends z.ZodType, R>(
     const formData = isStateful ? (arg2 as FormData) : (arg1 as FormData);
 
     try {
+      // 0. Rate limit
+      const rateLimitKey = `safe-action:${options.permission?.resource ?? "unknown"}:${options.permission?.action ?? "unknown"}`;
+      checkRateLimit(rateLimitKey, { maxRequests: 60, windowMs: 60 * 1000 });
+
       // 1. Auth & Permission Check
       let user = null;
       if (options.permission) {

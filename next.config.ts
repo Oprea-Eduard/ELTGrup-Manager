@@ -1,5 +1,18 @@
 import type { NextConfig } from "next";
 
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://images.pexels.com https://rfcaweuqpwlnukkuikzv.supabase.co",
+  "font-src 'self'",
+  "connect-src 'self' https://rfcaweuqpwlnukkuikzv.supabase.co",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -20,6 +33,10 @@ const nextConfig: NextConfig = {
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: csp,
           },
         ],
       },

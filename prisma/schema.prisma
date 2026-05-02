@@ -788,6 +788,7 @@ model Invoice {
   fgoRespondedAt   DateTime?
   paidAt        DateTime?
   notes         String?
+  deletedAt     DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -795,6 +796,7 @@ model Invoice {
 
   @@index([status, dueDate])
   @@index([projectId])
+  @@index([deletedAt])
 }
 
 model CostEntry {
@@ -805,12 +807,14 @@ model CostEntry {
   amount       Decimal  @db.Decimal(14, 2)
   occurredAt   DateTime
   approvedById String?
+  deletedAt    DateTime?
   createdAt    DateTime @default(now())
   approvedBy   User?    @relation("CostApprovedBy", fields: [approvedById], references: [id])
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, type])
   @@index([occurredAt])
+  @@index([deletedAt])
 }
 
 model DailySiteReport {

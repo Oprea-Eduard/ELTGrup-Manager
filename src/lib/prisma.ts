@@ -10,52 +10,38 @@ const basePrisma = new PrismaClient({
         : ["error"],
 });
 
+function hasModelField(model: string, field: string): boolean {
+  const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
+  return scalarFields && field in scalarFields;
+}
+
+function softDeleteQueryInterceptor({ model, args, query }: { model: string; args: any; query: any }, field = "deletedAt") {
+  if (!hasModelField(model, field) || args?.where?.[field] !== undefined) {
+    return query(args);
+  }
+  const finalArgs = args || {};
+  finalArgs.where = { ...(finalArgs.where || {}), [field]: null };
+  return query(finalArgs);
+}
+
 const prismaClientSingleton = () => {
   return basePrisma.$extends({
     query: {
       $allModels: {
         async findMany({ model, args, query }) {
-          const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
-          const hasDeletedAt = scalarFields && "deletedAt" in scalarFields;
-          if (!hasDeletedAt || (args as any)?.where?.deletedAt !== undefined) {
-            return query(args);
-          }
-          const finalArgs = args || {};
-          finalArgs.where = { ...(finalArgs.where || {}), deletedAt: null };
-          return query(finalArgs);
+          return softDeleteQueryInterceptor({ model, args, query });
         },
         async findFirst({ model, args, query }) {
-          const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
-          const hasDeletedAt = scalarFields && "deletedAt" in scalarFields;
-          if (!hasDeletedAt || (args as any)?.where?.deletedAt !== undefined) {
-            return query(args);
-          }
-          const finalArgs = args || {};
-          finalArgs.where = { ...(finalArgs.where || {}), deletedAt: null };
-          return query(finalArgs);
+          return softDeleteQueryInterceptor({ model, args, query });
         },
         async findUnique({ args, query }) {
           return query(args);
         },
         async count({ model, args, query }) {
-          const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
-          const hasDeletedAt = scalarFields && "deletedAt" in scalarFields;
-          if (!hasDeletedAt || (args as any)?.where?.deletedAt !== undefined) {
-            return query(args);
-          }
-          const finalArgs = args || {};
-          finalArgs.where = { ...(finalArgs.where || {}), deletedAt: null };
-          return query(finalArgs);
+          return softDeleteQueryInterceptor({ model, args, query });
         },
         async findFirstOrThrow({ model, args, query }) {
-          const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
-          const hasDeletedAt = scalarFields && "deletedAt" in scalarFields;
-          if (!hasDeletedAt || (args as any)?.where?.deletedAt !== undefined) {
-            return query(args);
-          }
-          const finalArgs = args || {};
-          finalArgs.where = { ...(finalArgs.where || {}), deletedAt: null };
-          return query(finalArgs);
+          return softDeleteQueryInterceptor({ model, args, query });
         },
       },
     },

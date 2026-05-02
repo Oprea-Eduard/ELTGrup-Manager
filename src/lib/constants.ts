@@ -1,0 +1,4 @@
+export const STANDARD_SHIFT_END_HOUR = 17;
+
+export const PAGINATION_DEFAULT_PAGE_SIZE = 10;
+export const PAGINATION_MAX_PAGE_SIZE = 100;
