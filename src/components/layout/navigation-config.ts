@@ -38,7 +38,7 @@ export const navItems: NavItem[] = [
   { module: "teams", href: "/echipe", label: "Echipe", icon: Users, section: "Executie" },
   { module: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, section: "Executie" },
   { module: "materials", href: "/materiale", label: "Depozit", icon: Package, section: "Executie" },
-  { module: "materials", href: "/materiale?tab=scule", label: "Scule", icon: Wrench, section: "Executie", sub: true },
+  { module: "materials", href: "/gestiune-scule", label: "Scule", icon: Wrench, section: "Executie", sub: true },
   { module: "materials", href: "/materiale?tab=echipamente", label: "Echipamente", icon: Smartphone, section: "Executie", sub: true },
   { module: "documents", href: "/documente", label: "Documente", icon: FileText, section: "Comercial" },
   { module: "clients", href: "/clienti", label: "Clienti", icon: Users, section: "Comercial" },
