@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import type { AppModule } from "@/src/lib/access-control";
 import { cn } from "@/src/lib/utils";
 import { navItems, navSections } from "@/src/components/layout/navigation-config";
+import pkg from "@/package.json";
 
 export function Sidebar({ visibleModules }: { visibleModules: AppModule[] }) {
   const pathname = usePathname();
@@ -73,6 +74,7 @@ export function Sidebar({ visibleModules }: { visibleModules: AppModule[] }) {
       <div className="border-t border-[var(--border)] px-4 py-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Strat operational</p>
         <p className="mt-1 text-xs text-[var(--muted-strong)]">Executie proiecte, materiale, trasabilitate financiara</p>
+        <p className="mt-2 text-[9px] text-[var(--muted)]/50">v{pkg.version}</p>
       </div>
     </aside>
   );
