@@ -55,15 +55,16 @@ export function Sidebar({ visibleModules }: { visibleModules: AppModule[] }) {
                       href={item.href}
                       className={cn(
                         "group relative flex items-center gap-2.5 rounded-lg border px-3 py-2 text-[13px] font-medium transition",
+                        item.sub ? "ml-5" : "",
                         active
                           ? "border-[var(--border-strong)] bg-[linear-gradient(180deg,color-mix(in oklab,var(--surface) 96%,transparent),color-mix(in oklab,var(--surface-2) 96%,transparent))] text-[var(--foreground)] shadow-[var(--shadow-float)]"
                           : "border-transparent text-[var(--muted-strong)] hover:border-[var(--border)] hover:bg-[var(--surface-card)] hover:text-[var(--foreground)]",
                       )}
                     >
                       {active ? <span className="absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--accent)]" /> : null}
-                      <Icon className={cn("h-4 w-4", active ? "text-[var(--accent-strong)]" : "text-[var(--muted)] group-hover:text-[var(--accent)]")} />
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      <ChevronRight className={cn("h-3.5 w-3.5", active ? "text-[var(--accent-strong)]" : "text-[var(--muted)]")} />
+                      {!item.sub && <Icon className={cn("h-4 w-4", active ? "text-[var(--accent-strong)]" : "text-[var(--muted)] group-hover:text-[var(--accent)]")} />}
+                      <span className={cn("min-w-0 flex-1 truncate", item.sub && "text-[12px] text-[var(--muted)]")}>{item.label}</span>
+                      {!item.sub && <ChevronRight className={cn("h-3.5 w-3.5", active ? "text-[var(--accent-strong)]" : "text-[var(--muted)]")} />}
                     </Link>
                   );
                 })}
