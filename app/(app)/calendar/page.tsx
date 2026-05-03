@@ -15,7 +15,7 @@ const PlanningBoard = dynamic(() => import("./planning-board").then((module) => 
   loading: () => (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
       {Array.from({ length: 7 }).map((_, index) => (
-        <div key={index} className="min-h-56 animate-pulse rounded-2xl border border-[var(--border)] bg-[rgba(10,18,33,0.7)] p-3" />
+        <div key={index} className="min-h-56 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3" />
       ))}
     </div>
   ),
@@ -108,7 +108,7 @@ export default async function CalendarPage({
         <Card className="space-y-4">
           <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Input name="q" placeholder="Cauta lucrare" defaultValue={trimmedQuery} />
-            <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+            <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]">
               <option value="">Toate proiectele</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -116,7 +116,7 @@ export default async function CalendarPage({
                 </option>
               ))}
             </select>
-            <select name="teamId" defaultValue={params.teamId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+            <select name="teamId" defaultValue={params.teamId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]">
               <option value="">Toate echipele</option>
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
@@ -130,7 +130,7 @@ export default async function CalendarPage({
           </form>
 
           {canCreate ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-[var(--muted)]">
                   Creeaza lucrari noi din dialog fara sa pierzi vizibilitatea planificarii curente.
@@ -152,7 +152,7 @@ export default async function CalendarPage({
                         required
                         defaultValue=""
                         disabled={projects.length === 0}
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
                       >
                         <option value="" disabled>
                           Selecteaza proiectul
@@ -169,7 +169,7 @@ export default async function CalendarPage({
                       <select
                         name="teamId"
                         defaultValue=""
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
                       >
                         <option value="">Fara echipa / de completat ulterior</option>
                         {teams.map((team) => (
@@ -185,7 +185,7 @@ export default async function CalendarPage({
                         <select
                           name="dayLabel"
                           defaultValue="Luni"
-                          className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                          className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
                         >
                           {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
                             <option key={day} value={day}>
@@ -209,7 +209,7 @@ export default async function CalendarPage({
           ) : null}
 
           {tasks.length === 0 ? (
-            <p className="rounded-xl border border-[var(--border)] bg-[rgba(10,18,33,0.7)] p-3 text-sm text-[var(--muted)]">
+            <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--muted)]">
               Nu exista lucrari in calendar pentru filtrele curente.
             </p>
           ) : null}

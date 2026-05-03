@@ -9,6 +9,7 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -79,14 +80,14 @@ function parseDate(value: string | null) {
 }
 
 function cardTone(priority: string) {
-  if (priority === "CRITICAL") return "border-[#7d3a45] bg-[rgba(98,42,50,0.42)]";
-  if (priority === "HIGH") return "border-[#82683c] bg-[rgba(109,84,42,0.3)]";
+  if (priority === "CRITICAL") return "border-[var(--danger)] bg-[rgba(98,42,50,0.42)]";
+  if (priority === "HIGH") return "border-[var(--warning)] bg-[rgba(109,84,42,0.3)]";
   return "border-[var(--border)] bg-[rgba(17,29,50,0.9)]";
 }
 
 function issueTone(issue: TaskIssue) {
-  if (issue.severity === "critical") return "border-[rgba(232,102,120,0.42)] bg-[rgba(105,38,50,0.34)] text-[#ffd7dd]";
-  return "border-[rgba(213,170,69,0.4)] bg-[rgba(213,170,69,0.14)] text-[#f4d88d]";
+  if (issue.severity === "critical") return "border-[rgba(232,102,120,0.42)] bg-[rgba(105,38,50,0.34)] text-[var(--danger)]";
+  return "border-[rgba(213,170,69,0.4)] bg-[rgba(213,170,69,0.14)] text-[var(--warning)]";
 }
 
 function DraggableTaskCard({ task, issues }: { task: Task; issues: TaskIssue[] }) {
@@ -104,22 +105,22 @@ function DraggableTaskCard({ task, issues }: { task: Task; issues: TaskIssue[] }
       style={style}
       {...listeners}
       {...attributes}
-      className={`touch-none cursor-grab rounded-xl border p-2.5 text-xs shadow-[0_10px_25px_-18px_rgba(0,0,0,0.85)] transition hover:border-[#4e73aa] active:cursor-grabbing ${hasCriticalIssue ? "border-[#8c3d49] bg-[rgba(97,37,48,0.46)]" : cardTone(task.priority)}`}
+      className={`touch-none cursor-grab rounded-xl border p-2.5 text-xs shadow-[0_10px_25px_-18px_rgba(0,0,0,0.85)] transition hover:border-[var(--accent-strong)] active:cursor-grabbing ${hasCriticalIssue ? "border-[var(--danger)] bg-[rgba(97,37,48,0.46)]" : cardTone(task.priority)}`}
     >
       <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
-      <p className="text-[#a8bbd6]">{task.project}</p>
-      <div className="mt-1 space-y-0.5 text-[11px] text-[#90a5c2]">
+      <p className="text-[var(--muted-strong)]">{task.project}</p>
+      <div className="mt-1 space-y-0.5 text-[11px] text-[var(--muted)]">
         <p>{task.team}</p>
         <p>{task.responsible || "Responsabil nealocat"}</p>
         <p>{task.startDateIso ? `Start: ${formatDate(task.startDateIso)}` : "Fara data de start"}</p>
         <p>{task.dueDateIso ? `Termen: ${formatDate(task.dueDateIso)}` : "Fara termen"}</p>
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
-        <span className="rounded-full border border-[rgba(146,166,195,0.22)] bg-[rgba(18,31,53,0.72)] px-2 py-0.5 text-[10px] font-medium text-[#aebed4]">
+        <span className="rounded-full border border-[rgba(146,166,195,0.22)] bg-[rgba(18,31,53,0.72)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted-strong)]">
           {task.status}
         </span>
         {issues.length ? (
-          <span className="rounded-full border border-[rgba(213,170,69,0.28)] bg-[rgba(213,170,69,0.14)] px-2 py-0.5 text-[10px] font-medium text-[#f4d88d]">
+          <span className="rounded-full border border-[rgba(213,170,69,0.28)] bg-[rgba(213,170,69,0.14)] px-2 py-0.5 text-[10px] font-medium text-[var(--warning)]">
             {issues.length} avertismente
           </span>
         ) : null}
@@ -134,7 +135,7 @@ function DraggableTaskCard({ task, issues }: { task: Task; issues: TaskIssue[] }
           ))}
         </ul>
       ) : null}
-      <Link href={`/lucrari/${task.id}`} className="mt-1 inline-block text-[11px] font-semibold text-[#bcd4f7] hover:underline">
+      <Link href={`/lucrari/${task.id}`} className="mt-1 inline-block text-[11px] font-semibold text-[var(--accent-strong)] hover:underline">
         Deschide lucrarea pentru corectie
       </Link>
     </div>
@@ -160,26 +161,26 @@ function DayColumn({
       ref={setNodeRef}
       className={[
         "min-h-56 rounded-2xl border p-3 transition",
-        isOver ? "border-[#4f79ba] bg-[rgba(31,52,86,0.42)]" : totalIssues ? "border-[rgba(213,170,69,0.28)] bg-[rgba(28,22,14,0.78)]" : "border-[var(--border)] bg-[rgba(10,18,33,0.84)]",
+        isOver ? "border-[var(--accent-strong)] bg-[rgba(31,52,86,0.42)]" : totalIssues ? "border-[rgba(213,170,69,0.28)] bg-[rgba(28,22,14,0.78)]" : "border-[var(--border)] bg-[rgba(10,18,33,0.84)]",
       ].join(" ")}
     >
       <div className="mb-2">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#92a6c3]">{day}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted-strong)]">{day}</p>
             {summaries.length ? (
               <div className="mt-1 flex flex-wrap gap-1">
                 {summaries.slice(0, 2).map((summary) => (
                   <span
                     key={summary.key}
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${summary.severity === "critical" ? "border-[rgba(232,102,120,0.35)] bg-[rgba(232,102,120,0.14)] text-[#ffd2da]" : "border-[rgba(213,170,69,0.35)] bg-[rgba(213,170,69,0.14)] text-[#f4d88d]"}`}
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${summary.severity === "critical" ? "border-[rgba(232,102,120,0.35)] bg-[rgba(232,102,120,0.14)] text-[var(--danger)]" : "border-[rgba(213,170,69,0.35)] bg-[rgba(213,170,69,0.14)] text-[var(--warning)]"}`}
                   >
                     {summary.label}
                     {summary.count > 1 ? ` x${summary.count}` : ""}
                   </span>
                 ))}
                 {summaries.length > 2 ? (
-                  <span className="rounded-full border border-[rgba(146,166,195,0.2)] bg-[rgba(18,31,53,0.65)] px-2 py-0.5 text-[10px] font-semibold text-[#aabbd2]">
+                  <span className="rounded-full border border-[rgba(146,166,195,0.2)] bg-[rgba(18,31,53,0.65)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
                     +{summaries.length - 2} altele
                   </span>
                 ) : null}
@@ -187,7 +188,7 @@ function DayColumn({
             ) : null}
           </div>
           {totalIssues > 0 ? (
-            <span className="rounded-full border border-[rgba(213,170,69,0.45)] bg-[rgba(213,170,69,0.16)] px-2 py-0.5 text-[10px] font-semibold text-[#f2cf77]">
+            <span className="rounded-full border border-[rgba(213,170,69,0.45)] bg-[rgba(213,170,69,0.16)] px-2 py-0.5 text-[10px] font-semibold text-[var(--warning)]">
               {totalIssues} avertismente
             </span>
           ) : null}
@@ -208,7 +209,10 @@ export function PlanningBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
+  );
 
   const { tasksByDay, taskIssuesById, summariesByDay } = useMemo(() => {
     const grouped = weekdays.reduce<Record<string, Task[]>>((acc, day) => {
@@ -381,7 +385,7 @@ export function PlanningBoard({ initialTasks }: { initialTasks: Task[] }) {
           ? "Se salveaza replanificarea..."
           : "Trage o lucrare intre zile pentru a actualiza programul saptamanii. Cardurile cu avertismente explica ce trebuie corectat."}
       </div>
-      {error ? <p className="mb-3 text-xs font-medium text-[#ffb7bf]">{error}</p> : null}
+      {error ? <p className="mb-3 text-xs font-medium text-[var(--danger)]">{error}</p> : null}
       <DndContext collisionDetection={closestCorners} sensors={sensors} onDragEnd={onDragEnd} onDragStart={onDragStart}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
           {weekdays.map((day) => (

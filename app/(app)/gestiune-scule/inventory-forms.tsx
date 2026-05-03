@@ -33,7 +33,7 @@ type AssignmentOption = { id: string; label: string };
 
 const fieldLabelClass = "text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]";
 const selectClassName =
-  "h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)] disabled:cursor-not-allowed disabled:opacity-60";
+  "h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-60";
 const helperClassName = "text-xs text-[var(--muted)]";
 
 function useActionFeedback(state: { ok: boolean; message?: string | null }) {

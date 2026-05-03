@@ -47,16 +47,19 @@ const prismaClientSingleton = () => {
     },
     model: {
       $allModels: {
-        async softDelete<T>(this: T, id: string) {
+        async softDelete<T, Args>(this: T, id: string): Promise<Args> {
           const context = Prisma.getExtensionContext(this);
           return (context as any).update({
             where: { id },
             data: { deletedAt: new Date() },
           });
         },
+        async findAllWithDeleted<T, Args>(this: T, args?: Args): Promise<Args[]> {
+          const context = Prisma.getExtensionContext(this);
+          return (context as any).findMany({ ...(args || {}), where: { ...((args as any)?.where || {}), deletedAt: undefined } });
+        },
       },
     },
-    result: {},
   });
 };
 
@@ -68,5 +71,14 @@ declare global {
 
 export const prisma = global.prisma || prismaClientSingleton();
 export { basePrisma };
+
+export async function healthCheck(): Promise<boolean> {
+  try {
+    await basePrisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 if (process.env.NODE_ENV !== "production") global.prisma = prisma;

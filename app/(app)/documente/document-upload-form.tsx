@@ -50,7 +50,7 @@ export function DocumentUploadForm({
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Titlu</label>
             <Input name="title" placeholder="Ex: Contract executie etapa 2" required />
             <p className="text-xs text-[var(--muted)]">Nume scurt si clar, folosit in cautare si in listarea documentelor.</p>
-            {state.errors?.title ? <p className="text-xs text-[#ffb4bd]">{state.errors.title[0]}</p> : null}
+            {state.errors?.title ? <p className="text-xs text-[var(--danger)]">{state.errors.title[0]}</p> : null}
           </div>
 
           <div className="space-y-2">
@@ -62,7 +62,7 @@ export function DocumentUploadForm({
               required
             />
             <p className="text-xs text-[var(--muted)]">Incarca PDF, imagini, arhive sau orice fisier relevant pentru proiect.</p>
-            {state.errors?.file ? <p className="text-xs text-[#ffb4bd]">{state.errors.file[0]}</p> : null}
+            {state.errors?.file ? <p className="text-xs text-[var(--danger)]">{state.errors.file[0]}</p> : null}
           </div>
 
           <div className="space-y-2">

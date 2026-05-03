@@ -46,7 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             visibleModules={visibleModules}
             user={{ id: session.user.id, name: session.user.name, roleKeys: session.user.roleKeys || [] }}
           />
-          <main className="relative z-[1] min-w-0 px-3 py-4 sm:px-5 lg:px-8 lg:py-6">
+          <main className="relative z-[1] min-w-0 px-3 py-4 sm:px-5 lg:px-8 lg:py-6" role="main" aria-label="Continut principal">
             <div className="mx-auto w-full max-w-[1640px] min-w-0">
               {children}
             </div>

@@ -72,7 +72,7 @@ export function CostEntryForm({ projects }: { projects: Option[] }) {
           {pending ? "Se salveaza..." : projects.length === 0 ? "Nu exista proiecte active" : "Salveaza cost"}
         </Button>
       </div>
-      {state.errors?.amount ? <p className="md:col-span-2 xl:col-span-5 text-xs text-[#ffb4bd]">{state.errors.amount[0]}</p> : null}
+      {state.errors?.amount ? <p className="md:col-span-2 xl:col-span-5 text-xs text-[var(--danger)]">{state.errors.amount[0]}</p> : null}
     </form>
   );
 }

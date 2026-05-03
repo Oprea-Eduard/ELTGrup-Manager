@@ -90,19 +90,6 @@ export default async function DashboardPage() {
   const scopedWorkOrderWhere = { ...workOrderScopeWhere(userContext, scope), deletedAt: null };
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const scopedWorkOrderIds =
-    scope.projectIds === null
-      ? null
-      : scope.projectIds.length === 0
-        ? []
-        : (
-          await prisma.workOrder.findMany({
-            where: scopedWorkOrderWhere,
-            select: { id: true },
-            orderBy: { id: "asc" },
-            take: 250,
-          })
-        ).map((item) => item.id);
   const primaryRole = getPrimaryRole(userContext.roleKeys);
   const roleContext = roleExperience[primaryRole];
 
@@ -110,225 +97,248 @@ export default async function DashboardPage() {
     return <ClientViewerDashboard userContext={userContext} scope={scope} />;
   }
 
-  // Verificari PSI
   const now = new Date();
   const in7Days = new Date(); in7Days.setDate(now.getDate() + 7);
 
-  const installationAlerts = await prisma.projectInstallation.groupBy({
-    by: ["status"],
-    where: {
-      deletedAt: null,
-      project: { ...scopedProjectWhere, deletedAt: null },
-    },
-    _count: { _all: true },
-  });
+  async function getDashboardData() {
+    const scopedWorkOrderIds =
+      scope.projectIds === null
+        ? null
+        : scope.projectIds.length === 0
+          ? []
+          : (
+            await prisma.workOrder.findMany({
+              where: scopedWorkOrderWhere,
+              select: { id: true },
+              orderBy: { id: "asc" },
+              take: 250,
+            })
+          ).map((item) => item.id);
 
-  const upcomingChecks = await prisma.projectInstallation.findMany({
-    where: {
-      deletedAt: null,
-      nextCheckAt: { gte: now, lte: in7Days },
-      project: { ...scopedProjectWhere, deletedAt: null },
-    },
-    select: {
-      id: true, name: true, nextCheckAt: true, status: true,
-      project: { select: { id: true, code: true, title: true } },
-    },
-    orderBy: { nextCheckAt: "asc" },
-    take: 5,
-  });
+    const [
+      installationAlerts,
+      upcomingChecks,
+      expiredChecks,
+      offerBuckets,
+      avizareProjects,
+      delayedTasks,
+      todaySchedule,
+      clockedIn,
+      pendingMaterialApprovals,
+      unpaidInvoices,
+      latestActivities,
+      weeklyHours,
+      projectStatusBuckets,
+      workOrderStatusBuckets,
+      overdueInvoices,
+      fgoStatusBuckets,
+    ] = await Promise.all([
+      prisma.projectInstallation.groupBy({
+        by: ["status"],
+        where: { deletedAt: null, project: { ...scopedProjectWhere, deletedAt: null } },
+        _count: { _all: true },
+      }),
+      prisma.projectInstallation.findMany({
+        where: {
+          deletedAt: null,
+          nextCheckAt: { gte: now, lte: in7Days },
+          project: { ...scopedProjectWhere, deletedAt: null },
+        },
+        select: {
+          id: true, name: true, nextCheckAt: true, status: true,
+          project: { select: { id: true, code: true, title: true } },
+        },
+        orderBy: { nextCheckAt: "asc" },
+        take: 5,
+      }),
+      prisma.projectInstallation.count({
+        where: { deletedAt: null, nextCheckAt: { lt: now }, project: { ...scopedProjectWhere, deletedAt: null } },
+      }),
+      prisma.offer.groupBy({
+        by: ["status"],
+        where: { deletedAt: null },
+        _count: { _all: true },
+      }),
+      prisma.project.findMany({
+        where: {
+          deletedAt: null,
+          ...scopedProjectWhere,
+          phases: { some: { type: "AVIZ_ISU", completed: false } },
+        },
+        select: {
+          id: true, code: true, title: true,
+          phases: {
+            where: { type: "AVIZ_ISU" },
+            select: { title: true, endDate: true, completed: true },
+            orderBy: { position: "asc" },
+            take: 1,
+          },
+        },
+        take: 5,
+      }),
+      prisma.workOrder.count({
+        where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } },
+      }),
+      prisma.workOrder.findMany({
+        where: { ...scopedWorkOrderWhere, startDate: { gte: startOfToday } },
+        select: {
+          id: true, title: true, startDate: true, status: true, description: true,
+          project: { select: { title: true } },
+          team: { select: { name: true } },
+        },
+        orderBy: [{ startDate: "asc" }, { id: "asc" }],
+        take: 10,
+      }),
+      prisma.timeEntry.count({ where: { ...scopedProjectIdWhere, endAt: null } }),
+      prisma.materialRequest.count({ where: { ...scopedProjectIdWhere, status: "PENDING" } }),
+      prisma.invoice.aggregate({
+        where: { ...scopedProjectIdWhere, status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
+      prisma.activityLog.findMany({
+        where:
+          scope.projectIds === null
+            ? undefined
+            : {
+                OR: [
+                  { entityType: "PROJECT", entityId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
+                  {
+                    entityType: "WORK_ORDER",
+                    entityId: { in: scopedWorkOrderIds && scopedWorkOrderIds.length ? scopedWorkOrderIds : ["__none__"] },
+                  },
+                ],
+              },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        select: {
+          id: true, action: true, entityType: true, entityId: true, createdAt: true,
+          user: { select: { firstName: true, lastName: true } },
+        },
+        take: 8,
+      }),
+      prisma.timeEntry.groupBy({
+        by: ["projectId"],
+        where: scopedProjectIdWhere,
+        _sum: { durationMinutes: true },
+        orderBy: [{ _sum: { durationMinutes: "desc" } }, { projectId: "asc" }],
+        take: 6,
+      }),
+      prisma.project.groupBy({
+        by: ["status"],
+        where: { deletedAt: null, ...scopedProjectWhere },
+        _count: { _all: true },
+      }),
+      prisma.workOrder.groupBy({
+        by: ["status"],
+        where: scopedWorkOrderWhere,
+        _count: { _all: true },
+      }),
+      prisma.invoice.findMany({
+        where: { ...scopedProjectIdWhere, status: "OVERDUE" },
+        select: {
+          id: true, invoiceNumber: true, totalAmount: true, paidAmount: true,
+          dueDate: true, status: true,
+          project: { select: { id: true, code: true, title: true } },
+        },
+        orderBy: { dueDate: "asc" },
+        take: 5,
+      }),
+      prisma.invoice.groupBy({
+        by: ["fgoStatus"],
+        where: { ...scopedProjectIdWhere, fgoStatus: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
 
-  const expiredChecks = await prisma.projectInstallation.count({
-    where: {
-      deletedAt: null,
-      nextCheckAt: { lt: now },
-      project: { ...scopedProjectWhere, deletedAt: null },
-    },
-  });
+    const totalInstallations = installationAlerts.reduce((acc, i) => acc + i._count._all, 0);
+    const certifiedCount = installationAlerts.find((i) => i.status === "CERTIFIED")?._count._all ?? 0;
+    const maintenanceCount = installationAlerts.find((i) => i.status === "UNDER_MAINTENANCE")?._count._all ?? 0;
 
-  const totalInstallations = installationAlerts.reduce((acc, i) => acc + i._count._all, 0);
-  const certifiedCount = installationAlerts.find((i) => i.status === "CERTIFIED")?._count._all ?? 0;
-  const maintenanceCount = installationAlerts.find((i) => i.status === "UNDER_MAINTENANCE")?._count._all ?? 0;
+    const projectsById =
+      weeklyHours.length === 0
+        ? []
+        : await prisma.project.findMany({
+            where: {
+              deletedAt: null,
+              AND: [{ id: { in: weeklyHours.map((h) => h.projectId) } }, scopedProjectWhere],
+            },
+            select: { id: true, title: true },
+          });
 
-  // Pipeline commercial + Avizare ISU (query separat)
-  const offerBuckets = await prisma.offer.groupBy({
-    by: ["status"],
-    where: { deletedAt: null },
-    _count: { _all: true },
-  });
+    const projectNameById = new Map(projectsById.map((project) => [project.id, project.title] as const));
+    const chartData = weeklyHours.map((hourItem) => ({
+      name: (projectNameById.get(hourItem.projectId) || "Proiect").slice(0, 18),
+      ore: Math.round((hourItem._sum.durationMinutes || 0) / 60),
+    }));
+    const offerCountByStatus = new Map(offerBuckets.map((item) => [item.status, item._count._all]));
+    const projectCountByStatus = new Map(projectStatusBuckets.map((item) => [item.status, item._count._all]));
+    const workOrderCountByStatus = new Map((workOrderStatusBuckets || []).map((item) => [item.status, item._count._all]));
+    const fgoCountByStatus = new Map(fgoStatusBuckets.map((item) => [item.fgoStatus, item._count._all]));
 
-  const avizareProjects = await prisma.project.findMany({
-    where: {
-      deletedAt: null,
-      ...scopedProjectWhere,
-      phases: { some: { type: "AVIZ_ISU", completed: false } },
-    },
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      phases: {
-        where: { type: "AVIZ_ISU" },
-        select: { title: true, endDate: true, completed: true },
-        orderBy: { position: "asc" },
-        take: 1,
+    return {
+      delayedTasks,
+      todaySchedule,
+      clockedIn,
+      pendingMaterialApprovals,
+      unpaidInvoices,
+      latestActivities,
+      chartData,
+      upcomingChecks,
+      expiredChecks,
+      totalInstallations,
+      certifiedCount,
+      maintenanceCount,
+      offersDraft: offerCountByStatus.get("DRAFT") || 0,
+      offersSent: offerCountByStatus.get("SENT") || 0,
+      offersAccepted: offerCountByStatus.get("ACCEPTED") || 0,
+      avizareProjects,
+      activeProjects: projectCountByStatus.get("ACTIVE") || 0,
+      plannedProjects: projectCountByStatus.get("PLANNED") || 0,
+      blockedProjects: projectCountByStatus.get("BLOCKED") || 0,
+      completedProjects: projectCountByStatus.get("COMPLETED") || 0,
+      todoOrders: workOrderCountByStatus.get("TODO") || 0,
+      inProgressOrders: workOrderCountByStatus.get("IN_PROGRESS") || 0,
+      blockedOrders: workOrderCountByStatus.get("BLOCKED") || 0,
+      overdueInvoices,
+      fgoStats: {
+        sent:
+          (fgoCountByStatus.get(FgoInvoiceStatus.SENT_TO_ANAF) || 0) +
+          (fgoCountByStatus.get(FgoInvoiceStatus.SIGNED) || 0) +
+          (fgoCountByStatus.get(FgoInvoiceStatus.SUBMITTED_OK) || 0),
+        pending:
+          (fgoCountByStatus.get(FgoInvoiceStatus.DRAFT_UPLOADED) || 0) +
+          (fgoCountByStatus.get(FgoInvoiceStatus.PENDING_VALIDATION) || 0) +
+          (fgoCountByStatus.get(FgoInvoiceStatus.VALIDATION_OK) || 0),
+        errors:
+          (fgoCountByStatus.get(FgoInvoiceStatus.VALIDATION_ERRORS) || 0) +
+          (fgoCountByStatus.get(FgoInvoiceStatus.SUBMITTED_ERRORS) || 0) +
+          (fgoCountByStatus.get(FgoInvoiceStatus.REJECTED) || 0),
       },
-    },
-    take: 5,
-  });
+    };
+  }
 
-  // Parallelize all main dashboard data fetching
-  const [
+  const dashboardData = await getDashboardData();
+  const {
     delayedTasks,
     todaySchedule,
     clockedIn,
     pendingMaterialApprovals,
     unpaidInvoices,
     latestActivities,
-    weeklyHours,
-    projectStatusBuckets,
-    workOrderStatusBuckets,
-    overdueInvoices,
-    fgoStatusBuckets,
-  ] = await Promise.all([
-    prisma.workOrder.count({
-      where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } },
-    }),
-    prisma.workOrder.findMany({
-      where: { ...scopedWorkOrderWhere, startDate: { gte: startOfToday } },
-      select: {
-        id: true,
-        title: true,
-        startDate: true,
-        status: true,
-        description: true,
-        project: { select: { title: true } },
-        team: { select: { name: true } },
-      },
-      orderBy: [{ startDate: "asc" }, { id: "asc" }],
-      take: 10,
-    }),
-    prisma.timeEntry.count({ where: { ...scopedProjectIdWhere, endAt: null } }),
-    prisma.materialRequest.count({ where: { ...scopedProjectIdWhere, status: "PENDING" } }),
-    prisma.invoice.aggregate({
-      where: { ...scopedProjectIdWhere, status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
-      _sum: { totalAmount: true, paidAmount: true },
-    }),
-    prisma.activityLog.findMany({
-      where:
-        scope.projectIds === null
-          ? undefined
-          : {
-              OR: [
-                { entityType: "PROJECT", entityId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
-                {
-                  entityType: "WORK_ORDER",
-                  entityId: { in: scopedWorkOrderIds && scopedWorkOrderIds.length ? scopedWorkOrderIds : ["__none__"] },
-                },
-              ],
-            },
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-      select: {
-        id: true,
-        action: true,
-        entityType: true,
-        entityId: true,
-        createdAt: true,
-        user: { select: { firstName: true, lastName: true } },
-      },
-      take: 8,
-    }),
-    prisma.timeEntry.groupBy({
-      by: ["projectId"],
-      where: scopedProjectIdWhere,
-      _sum: { durationMinutes: true },
-      orderBy: [{ _sum: { durationMinutes: "desc" } }, { projectId: "asc" }],
-      take: 6,
-    }),
-    prisma.project.groupBy({
-      by: ["status"],
-      where: { deletedAt: null, ...scopedProjectWhere },
-      _count: { _all: true },
-    }),
-    prisma.workOrder.groupBy({
-      by: ["status"],
-      where: scopedWorkOrderWhere,
-      _count: { _all: true },
-    }),
-    prisma.invoice.findMany({
-      where: {
-        ...scopedProjectIdWhere,
-        status: "OVERDUE",
-      },
-      select: {
-        id: true,
-        invoiceNumber: true,
-        totalAmount: true,
-        paidAmount: true,
-        dueDate: true,
-        status: true,
-        project: { select: { id: true, code: true, title: true } },
-      },
-      orderBy: { dueDate: "asc" },
-      take: 5,
-    }),
-    prisma.invoice.groupBy({
-      by: ["fgoStatus"],
-      where: {
-        ...scopedProjectIdWhere,
-        fgoStatus: { not: null },
-      },
-      _count: { _all: true },
-    }),
-  ]);
-
-  const projectsById =
-    weeklyHours.length === 0
-      ? []
-      : await prisma.project.findMany({
-          where: {
-            deletedAt: null,
-            AND: [{ id: { in: weeklyHours.map((h) => h.projectId) } }, scopedProjectWhere],
-          },
-          select: { id: true, title: true },
-        });
-
-  const projectNameById = new Map(projectsById.map((project) => [project.id, project.title] as const));
-  const chartData = weeklyHours.map((hourItem) => ({
-    name: (projectNameById.get(hourItem.projectId) || "Proiect").slice(0, 18),
-    ore: Math.round((hourItem._sum.durationMinutes || 0) / 60),
-  }));
-  const offerCountByStatus = new Map(offerBuckets.map((item) => [item.status, item._count._all]));
-  const offersDraft = offerCountByStatus.get("DRAFT") || 0;
-  const offersSent = offerCountByStatus.get("SENT") || 0;
-  const offersAccepted = offerCountByStatus.get("ACCEPTED") || 0;
-
-  const projectCountByStatus = new Map(projectStatusBuckets.map((item) => [item.status, item._count._all]));
-  const activeProjects = projectCountByStatus.get("ACTIVE") || 0;
-  const plannedProjects = projectCountByStatus.get("PLANNED") || 0;
-  const blockedProjects = projectCountByStatus.get("BLOCKED") || 0;
-  const completedProjects = projectCountByStatus.get("COMPLETED") || 0;
-
-  const workOrderCountByStatus = new Map((workOrderStatusBuckets || []).map((item) => [item.status, item._count._all]));
-  const todoOrders = workOrderCountByStatus.get("TODO") || 0;
-  const inProgressOrders = workOrderCountByStatus.get("IN_PROGRESS") || 0;
-  const blockedOrders = workOrderCountByStatus.get("BLOCKED") || 0;
-
+    chartData,
+    offersDraft,
+    offersSent,
+    offersAccepted,
+    avizareProjects,
+    activeProjects,
+    plannedProjects,
+    blockedProjects,
+    completedProjects,
+    todoOrders,
+    inProgressOrders,
+    blockedOrders,
+    fgoStats,
+  } = dashboardData;
   const receivables = Number(unpaidInvoices._sum.totalAmount || 0) - Number(unpaidInvoices._sum.paidAmount || 0);
-  const fgoCountByStatus = new Map(fgoStatusBuckets.map((item) => [item.fgoStatus, item._count._all]));
-  const fgoStats = {
-    sent:
-      (fgoCountByStatus.get(FgoInvoiceStatus.SENT_TO_ANAF) || 0) +
-      (fgoCountByStatus.get(FgoInvoiceStatus.SIGNED) || 0) +
-      (fgoCountByStatus.get(FgoInvoiceStatus.SUBMITTED_OK) || 0),
-    pending:
-      (fgoCountByStatus.get(FgoInvoiceStatus.DRAFT_UPLOADED) || 0) +
-      (fgoCountByStatus.get(FgoInvoiceStatus.PENDING_VALIDATION) || 0) +
-      (fgoCountByStatus.get(FgoInvoiceStatus.VALIDATION_OK) || 0),
-    errors:
-      (fgoCountByStatus.get(FgoInvoiceStatus.VALIDATION_ERRORS) || 0) +
-      (fgoCountByStatus.get(FgoInvoiceStatus.SUBMITTED_ERRORS) || 0) +
-      (fgoCountByStatus.get(FgoInvoiceStatus.REJECTED) || 0),
-  };
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">

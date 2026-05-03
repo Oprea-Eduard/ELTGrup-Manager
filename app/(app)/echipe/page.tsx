@@ -174,7 +174,7 @@ export default async function EchipePage({
         />
 
         {createDialogOpen && canCreate ? (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(7,12,18,0.72)] p-3 sm:items-center sm:p-5" role="presentation">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--background)]/70 p-3 sm:items-center sm:p-5" role="presentation">
             <div className="w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-panel)] sm:p-5">
               <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
                 <div>
@@ -261,7 +261,7 @@ export default async function EchipePage({
                 </div>
 
                 {team.workers.length ? (
-                  <div className="rounded-xl border border-[var(--border)] bg-[rgba(10,18,28,0.35)] p-3">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Membri echipa</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {team.workers.map((worker) => (
@@ -276,9 +276,11 @@ export default async function EchipePage({
                 {canUpdate && !isArchived ? (
                   <form action={updateTeamAction} className="grid gap-2 border-t border-[var(--border)] pt-3">
                     <input type="hidden" name="id" value={team.id} />
-                    <Input name="name" defaultValue={team.name} />
-                    <Input name="code" defaultValue={team.code} />
-                    <Input name="region" defaultValue={team.region || ""} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input name="name" defaultValue={team.name} placeholder="Nume" />
+                      <Input name="code" defaultValue={team.code} placeholder="Cod" />
+                    </div>
+                    <Input name="region" defaultValue={team.region || ""} placeholder="Regiune" />
                     <select name="leadUserId" defaultValue={team.leadUserId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]">
                       <option value="">Fara sef echipa</option>
                       {userOptions.map((user) => (
@@ -296,39 +298,42 @@ export default async function EchipePage({
                 ) : null}
 
                 {canUpdate && !isArchived ? (
-                  <details className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3">
-                    <summary className="cursor-pointer text-sm font-semibold text-[var(--foreground)]">Gestioneaza membri</summary>
-                    <form action={updateTeamMembersAction} className="mt-3 grid gap-3">
-                      <input type="hidden" name="id" value={team.id} />
-                      {workerOptions.length ? (
-                        <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
-                          {workerOptions.map((worker) => {
-                            const checked = worker.teamId === team.id;
-                            return (
-                              <label key={worker.id} className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[rgba(10,18,28,0.42)] px-3 py-2 text-sm text-[var(--foreground)]">
-                                <input
-                                  type="checkbox"
-                                  name="memberIds"
-                                  value={worker.id}
-                                  defaultChecked={checked}
-                                  className="mt-1 h-4 w-4 accent-[#8dc1f5]"
-                                />
-                                <span className="min-w-0">
-                                  <span className="block truncate">{worker.label}</span>
-                                  <span className="block text-xs text-[var(--muted)]">
-                                    {checked ? "Membru aici" : worker.teamName ? `Acum in ${worker.teamName}` : "Fara echipa"}
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)]">
+                    <details>
+                      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-[var(--foreground)]">Gestioneaza membri ({team.workers.length})</summary>
+                      <form action={updateTeamMembersAction} className="space-y-2 p-3">
+                        <input type="hidden" name="id" value={team.id} />
+                        {workerOptions.length ? (
+                          <div className="grid max-h-56 gap-2 overflow-y-auto pr-1">
+                            {workerOptions.map((worker) => {
+                              const checked = worker.teamId === team.id;
+                              const isUnassigned = !worker.teamName;
+                              return (
+                                <label key={worker.id} className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-[var(--foreground)] ${checked ? "border-[var(--accent)]/30 bg-[var(--accent)]/10" : isUnassigned ? "border-[var(--success)]/20 bg-[var(--success)]/5" : "border-[var(--border)] bg-[var(--surface)]/20"}`}>
+                                  <input
+                                    type="checkbox"
+                                    name="memberIds"
+                                    value={worker.id}
+                                    defaultChecked={checked}
+                                    className="mt-1 h-4 w-4 accent-[var(--accent)]"
+                                  />
+                                  <span className="min-w-0">
+                                    <span className="block truncate">{worker.label}</span>
+                                    <span className="block text-xs text-[var(--muted)]">
+                                      {checked ? "Membru aici" : isUnassigned ? "Nealocat" : `Acum in ${worker.teamName}`}
+                                    </span>
                                   </span>
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-[var(--muted)]">Nu exista profiluri de muncitor disponibile.</p>
-                      )}
-                      <Button type="submit" size="sm" variant="secondary">Salveaza membri</Button>
-                    </form>
-                  </details>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[var(--muted)]">Nu exista profiluri de muncitor disponibile.</p>
+                        )}
+                        <Button type="submit" size="sm" variant="secondary">Salveaza membri</Button>
+                      </form>
+                    </details>
+                  </div>
                 ) : null}
 
                 <div className="flex flex-wrap gap-2">

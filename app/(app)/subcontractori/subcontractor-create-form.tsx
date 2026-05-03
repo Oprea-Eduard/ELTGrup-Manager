@@ -28,13 +28,13 @@ export function SubcontractorCreateForm() {
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <div>
         <Input name="name" placeholder="Denumire" required />
-        {state.errors?.name ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.name[0]}</p> : null}
+        {state.errors?.name ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.name[0]}</p> : null}
       </div>
       <Input name="cui" placeholder="CUI" />
       <Input name="contactName" placeholder="Contact" />
       <div>
         <Input name="email" type="email" placeholder="Email" />
-        {state.errors?.email ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.email[0]}</p> : null}
+        {state.errors?.email ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.email[0]}</p> : null}
       </div>
       <Input name="phone" placeholder="Telefon" />
       <select name="approvalStatus" defaultValue="IN_VERIFICARE" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">

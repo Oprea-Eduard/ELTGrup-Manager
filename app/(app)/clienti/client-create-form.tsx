@@ -28,7 +28,7 @@ export function ClientCreateForm() {
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <div>
         <Input name="name" placeholder="Denumire client" required />
-        {state.errors?.name ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.name[0]}</p> : null}
+        {state.errors?.name ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.name[0]}</p> : null}
       </div>
       <select
         name="type"
@@ -45,14 +45,14 @@ export function ClientCreateForm() {
       <Input name="cui" placeholder="CUI" />
       <div>
         <Input name="email" type="email" placeholder="Email" />
-        {state.errors?.email ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.email[0]}</p> : null}
+        {state.errors?.email ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.email[0]}</p> : null}
       </div>
       <Input name="phone" placeholder="Telefon" />
       <Input name="billingAddress" placeholder="Adresa facturare" className="md:col-span-2" />
       <Input name="contactName" placeholder="Persoana contact" />
       <div>
         <Input name="contactEmail" placeholder="Email contact" type="email" />
-        {state.errors?.contactEmail ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.contactEmail[0]}</p> : null}
+        {state.errors?.contactEmail ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.contactEmail[0]}</p> : null}
       </div>
       <Input name="contactPhone" placeholder="Telefon contact" />
       <div className="md:col-span-2 xl:col-span-4 flex justify-end">

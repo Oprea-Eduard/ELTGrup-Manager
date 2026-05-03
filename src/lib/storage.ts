@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile, open } from "fs/promises";
+import { constants } from "fs";
 import path from "path";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const LOCAL_STORAGE_ROOT = path.resolve(process.cwd(), "storage", "uploads");
 
 const ALLOWED_MIME_TYPES = [
@@ -17,6 +18,8 @@ const ALLOWED_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain",
   "text/csv",
+  "application/zip",
+  "application/gzip",
 ];
 
 function sanitizeName(name: string) {
@@ -74,6 +77,35 @@ function parseS3StoragePath(storagePath: string) {
   return { bucket: match[1], key: match[2] };
 }
 
+export async function readDocumentFileRange(storagePath: string, start: number, end: number) {
+  const s3Target = parseS3StoragePath(storagePath);
+  if (s3Target) {
+    const client = storageClient();
+    if (!client) throw new Error("Configuratia storage S3 lipseste.");
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: s3Target.bucket,
+        Key: s3Target.key,
+        Range: `bytes=${start}-${end}`,
+      }),
+    );
+    if (!response.Body) throw new Error("Documentul nu contine date.");
+    const bytes = await response.Body.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+
+  const localPath = resolveLocalObjectPath(storagePath);
+  if (!localPath) throw new Error("Tip de stocare document necunoscut.");
+  const fd = await open(localPath, constants.O_RDONLY);
+  try {
+    const buf = Buffer.alloc(end - start + 1);
+    await fd.read(buf, 0, buf.length, start);
+    return buf;
+  } finally {
+    await fd.close();
+  }
+}
+
 export async function readDocumentFile(storagePath: string) {
   const s3Target = parseS3StoragePath(storagePath);
   if (s3Target) {
@@ -103,7 +135,7 @@ export async function readDocumentFile(storagePath: string) {
 
 export async function uploadDocumentFile(file: File) {
   if (!file || file.size === 0) throw new Error("Fisierul este obligatoriu.");
-  if (file.size > MAX_FILE_SIZE) throw new Error("Fisierul depaseste 20MB.");
+  if (file.size > MAX_FILE_SIZE) throw new Error("Fisierul depaseste 50MB.");
 
   const mimeType = file.type || "application/octet-stream";
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {

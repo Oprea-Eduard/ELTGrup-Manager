@@ -38,7 +38,7 @@ const projectStatusOptions: Option[] = [
 
 function FieldError({ message }: { message?: string[] }) {
   if (!message?.length) return null;
-  return <p className="text-xs text-[#ffb4bd]">{message[0]}</p>;
+  return <p className="text-xs text-[var(--danger)]">{message[0]}</p>;
 }
 
 function SelectField({
@@ -68,7 +68,7 @@ function SelectField({
         name={name}
         required={required}
         defaultValue={defaultValue}
-        className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]"
+        className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]"
       >
         {required ? <option value="">Alege...</option> : null}
         {options.map((option) => (
@@ -106,7 +106,7 @@ export function ProjectCreateForm({ clients }: { clients: ClientOption[] }) {
           <select
             name="clientId"
             required
-            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]"
+        className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]"
           >
             <option value="">Alege clientul</option>
             {clients.map((client) => (
@@ -172,7 +172,7 @@ export function ProjectCreateForm({ clients }: { clients: ClientOption[] }) {
         </label>
       </div>
 
-      {!state.ok && state.message ? <p className="text-sm text-[#ffb4bd]">{state.message}</p> : null}
+      {!state.ok && state.message ? <p className="text-sm text-[var(--danger)]">{state.message}</p> : null}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>

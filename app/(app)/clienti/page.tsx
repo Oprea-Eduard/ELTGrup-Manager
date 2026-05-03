@@ -270,7 +270,7 @@ export default async function ClientiPage({
                   {activeClientsOnPage.length > 0 ? (
                     <div className="grid gap-1 md:grid-cols-2">
                       {activeClientsOnPage.map((client) => (
-                        <label key={client.id} className="flex items-center gap-2 text-sm text-[#d9e8fb]">
+                        <label key={client.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
                           <input type="checkbox" name="ids" value={client.id} className="h-4 w-4" />
                           <span>{client.name}</span>
                         </label>
@@ -302,7 +302,7 @@ export default async function ClientiPage({
               {client.deletedAt ? <Badge tone="warning">Arhivat</Badge> : null}
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <Link href={`/clienti/${client.id}`} className="text-base font-bold text-[#c8dcff] hover:underline">
+                  <Link href={`/clienti/${client.id}`} className="text-base font-bold text-[var(--heading)] hover:underline">
                     {client.name}
                   </Link>
                   <p className="text-xs text-[var(--muted)]">{client.cui || "Fara CUI"}</p>

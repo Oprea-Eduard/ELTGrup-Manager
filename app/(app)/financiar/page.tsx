@@ -1,5 +1,6 @@
 import { InvoiceStatus } from "@prisma/client";
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -9,6 +10,8 @@ import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-butto
 import { FormModal } from "@/src/components/forms/form-modal";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { ProfitabilityChart } from "@/src/components/dashboard/profitability-chart";
+import { FgoStatusBadge } from "@/src/components/invoices/fgo-status-badge";
+import { FgoSummaryCard } from "@/src/components/invoices/fgo-widget";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
@@ -16,6 +19,7 @@ import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { deleteCostEntry, deleteInvoice, updateInvoiceStatus } from "./actions";
+import { sendInvoiceToFgo } from "../facturi/actions";
 import { CostEntryForm } from "./cost-entry-form";
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
@@ -87,7 +91,7 @@ export default async function FinanciarPage({
     status: statusFilter,
   };
 
-  const [totalInvoices, costs, projects, invoiceStatusSummary, recentCostEntries] = await Promise.all([
+  const [totalInvoices, costs, projects, invoiceStatusSummary, recentCostEntries, fgoStatusSummary] = await Promise.all([
     prisma.invoice.count({ where: invoiceWhere }),
     prisma.costEntry.groupBy({
       by: ["type"],
@@ -118,6 +122,11 @@ export default async function FinanciarPage({
       orderBy: [{ occurredAt: "desc" }, { id: "asc" }],
       take: 20,
     }),
+    prisma.invoice.groupBy({
+      by: ["fgoStatus"],
+      where: { ...invoiceScopeWhere, fgoStatus: { not: null } },
+      _count: { _all: true },
+    }),
   ]);
   const { totalPages, currentPage, skip, take } = resolvePagination({
     page,
@@ -133,6 +142,8 @@ export default async function FinanciarPage({
       dueDate: true,
       issueDate: true,
       fgoSentAt: true,
+      fgoStatus: true,
+      fgoTrackingId: true,
       paidAt: true,
       status: true,
       project: { select: { id: true, title: true } },
@@ -171,12 +182,33 @@ export default async function FinanciarPage({
   const paidAmount = invoiceStatusSummary
     .filter((item) => item.status === InvoiceStatus.PAID)
     .reduce((sum, item) => sum + Number(item._sum.paidAmount || 0), 0);
+  const totalInvoiced = invoiceStatusSummary.reduce((sum, s) => sum + Number(s._sum.totalAmount || 0), 0);
+  const totalCosts = costs.reduce((sum, c) => sum + Number(c._sum.amount || 0), 0);
+  const netProfit = totalInvoiced - totalCosts;
 
   return (
     <PermissionGuard resource="INVOICES" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Financiar operational" subtitle="Buget proiect, costuri reale, TVA, creante, status facturi, marja estimata" />
         
+        <section className="grid gap-3 md:grid-cols-3">
+          <Card>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Total facturat</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">suma totala facturi emise</p>
+          </Card>
+          <Card>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Total costuri</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(totalCosts)}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">costuri operationale inregistrate</p>
+          </Card>
+          <Card>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Profit net</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(netProfit)}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">marja estimata ({totalInvoiced > 0 ? ((netProfit / totalInvoiced) * 100).toFixed(1) : "0.0"}%)</p>
+          </Card>
+        </section>
+
         {chartData.length > 0 && (
           <ProfitabilityChart data={chartData} />
         )}
@@ -226,6 +258,23 @@ export default async function FinanciarPage({
             </div>
           </Card>
         </section>
+
+        {fgoStatusSummary.length > 0 ? (
+          <FgoSummaryCard
+            stats={{
+              sent: fgoStatusSummary
+                .filter((s) => ["SUBMITTED_OK", "SENT_TO_ANAF", "SIGNED"].includes(s.fgoStatus ?? ""))
+                .reduce((a, s) => a + s._count._all, 0),
+              pending: fgoStatusSummary
+                .filter((s) => ["DRAFT_UPLOADED", "PENDING_VALIDATION", "VALIDATION_OK"].includes(s.fgoStatus ?? ""))
+                .reduce((a, s) => a + s._count._all, 0),
+              errors: fgoStatusSummary
+                .filter((s) => ["VALIDATION_ERRORS", "SUBMITTED_ERRORS", "REJECTED"].includes(s.fgoStatus ?? ""))
+                .reduce((a, s) => a + s._count._all, 0),
+            }}
+          />
+        ) : null}
+
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {costs.length === 0 ? (
             <Card className="md:col-span-2 xl:col-span-4">
@@ -287,38 +336,54 @@ export default async function FinanciarPage({
           ) : (
             <div className="mt-3 space-y-1">
               {invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[#dee8f8]">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">{invoice.invoiceNumber} • {invoice.project.title} • {invoice.client.name}</span>
-                    <span className="font-semibold text-[var(--foreground)]">{formatCurrency(invoice.totalAmount.toString())}</span>
-                    <Badge tone={invoice.status === "OVERDUE" ? "danger" : invoice.status === "PAID" ? "success" : "warning"}>
-                      {invoiceStatusLabels[invoice.status]}
-                    </Badge>
+                  <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--foreground)]">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium">{invoice.invoiceNumber} • {invoice.project.title} • {invoice.client.name}</span>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        Scadenta {new Intl.DateTimeFormat("ro-RO").format(invoice.dueDate)}
+                        {invoice.issueDate ? ` • Emisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.issueDate)}` : ""}
+                        {invoice.paidAt ? ` • Incasata ${new Intl.DateTimeFormat("ro-RO").format(invoice.paidAt)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FgoStatusBadge status={invoice.fgoStatus} />
+                      <span className="font-semibold text-[var(--foreground)]">{formatCurrency(invoice.totalAmount.toString())}</span>
+                      <Badge tone={invoice.status === "OVERDUE" ? "danger" : invoice.status === "PAID" ? "success" : "warning"}>
+                        {invoiceStatusLabels[invoice.status]}
+                      </Badge>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
-                    Scadenta {new Intl.DateTimeFormat("ro-RO").format(invoice.dueDate)}
-                    {invoice.issueDate ? ` • Emisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.issueDate)}` : ""}
-                    {invoice.fgoSentAt ? ` • Trimisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.fgoSentAt)}` : ""}
-                    {invoice.paidAt ? ` • Incasata ${new Intl.DateTimeFormat("ro-RO").format(invoice.paidAt)}` : ""}
-                  </p>
                   {canUpdateInvoice || canDeleteFinancial ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       {canUpdateInvoice ? (
-                        <form action={updateInvoiceStatus} className="grid gap-2 sm:grid-cols-[minmax(0,220px)_auto] sm:items-center">
+                        <form action={updateInvoiceStatus} className="flex items-center gap-2">
                           <input type="hidden" name="id" value={invoice.id} />
-                          <select name="status" defaultValue={invoice.status} className="h-9 w-full rounded-md px-2 text-xs">
+                          <select name="status" defaultValue={invoice.status} className="h-9 rounded-md px-2 text-xs">
                             {Object.values(InvoiceStatus).map((status) => (
                               <option key={status} value={status}>{invoiceStatusLabels[status]}</option>
                             ))}
                           </select>
-                          <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">Actualizeaza status</Button>
+                          <Button type="submit" size="sm" variant="secondary">Actualizeaza</Button>
+                        </form>
+                      ) : null}
+                      {canUpdateInvoice && !invoice.fgoStatus ? (
+                        <form action={sendInvoiceToFgo} className="inline">
+                          <input type="hidden" name="invoiceId" value={invoice.id} />
+                          <Button size="sm" variant="secondary">Trimite FGO</Button>
+                        </form>
+                      ) : null}
+                      {canUpdateInvoice && invoice.fgoStatus && invoice.fgoStatus !== "SUBMITTED_OK" && invoice.fgoStatus !== "SENT_TO_ANAF" && invoice.fgoStatus !== "SIGNED" ? (
+                        <form action={sendInvoiceToFgo} className="inline">
+                          <input type="hidden" name="invoiceId" value={invoice.id} />
+                          <Button size="sm" variant="secondary">Retrimite FGO</Button>
                         </form>
                       ) : null}
                       {canDeleteFinancial ? (
                         <form action={deleteInvoice}>
                           <input type="hidden" name="id" value={invoice.id} />
                           <ConfirmSubmitButton
-                            text="Sterge factura"
+                            text="Sterge"
                             variant="destructive"
                             confirmMessage={`Confirmi stergerea definitiva a facturii ${invoice.invoiceNumber}?`}
                           />
@@ -352,7 +417,7 @@ export default async function FinanciarPage({
               <p className="text-sm text-[var(--muted)]">Nu exista costuri recente in aria ta.</p>
             ) : (
               recentCostEntries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[#dde8f8]">
+                <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--foreground)]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-[var(--foreground)]">{entry.description}</p>
@@ -394,7 +459,7 @@ export default async function FinanciarPage({
               const invoiced = invoicedByProject.get(project.id) || 0;
               const margin = invoiced - costTotal;
               return (
-                <div key={project.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[#dde8f8]">
+                <div key={project.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--foreground)]">
                   <p className="font-semibold text-[var(--foreground)]">{project.title}</p>
                   <p className="text-xs text-[var(--muted)]">Cost: {formatCurrency(costTotal)} • Facturat: {formatCurrency(invoiced)} • Marja: {formatCurrency(margin)}</p>
                 </div>

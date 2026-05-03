@@ -6,8 +6,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { cache } from "react";
 import { z } from "zod";
 import { prisma, basePrisma } from "@/src/lib/prisma";
+import { checkRateLimit } from "@/src/lib/rate-limit";
 
-const JWT_ROLE_SYNC_INTERVAL_MS = 60 * 1000;
+const JWT_ROLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Email invalid"),
@@ -16,7 +17,7 @@ const loginSchema = z.object({
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(basePrisma as any),
-  session: { strategy: "jwt", maxAge: 24 * 60 * 60 }, // 24 hours
+  session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
   pages: {
     signIn: "/autentificare",
   },
@@ -38,9 +39,17 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Parola", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
+
+        const ip = (req?.headers?.["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || "unknown";
+        const rateLimitKey = `login:${ip}:${parsed.data.email}`;
+        try {
+          checkRateLimit(rateLimitKey, { maxRequests: 5, windowMs: 15 * 60 * 1000 });
+        } catch {
+          throw new Error("Prea multe incercari de autentificare. Incearca din nou peste 15 minute.");
+        }
 
         let user;
         try {
@@ -49,12 +58,17 @@ export const authOptions: NextAuthOptions = {
             include: { roles: { include: { role: true } } },
           });
         } catch {
-          throw new Error("AUTH_DB_UNAVAILABLE");
+          throw new Error("Baza de date nu este disponibila momentan. Te rugam sa incerci din nou mai tarziu.");
         }
 
         if (!user || !user.isActive || user.deletedAt) return null;
 
-        const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+        let valid = false;
+        try {
+          valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+        } catch {
+          throw new Error("Eroare interna la verificarea parolei. Te rugam sa incerci din nou.");
+        }
         if (!valid) return null;
 
         try {
@@ -108,11 +122,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!dbUser || !dbUser.isActive || dbUser.deletedAt) {
-          token.roleKeys = [];
-          token.userId = "";
-          token.deactivatedAt = Date.now();
-          token.roleSyncedAt = Date.now();
-          return token;
+          const clearedToken = { ...token, userId: "", roleKeys: [] as RoleKey[], email: undefined as string | undefined };
+          return clearedToken;
         }
 
         token.roleKeys = dbUser.roles.map((item) => item.role.key) as RoleKey[];
@@ -123,6 +134,9 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      if (!token.userId) {
+        return session;
+      }
       if (session.user) {
         session.user.id = token.userId as string;
         session.user.roleKeys = (token.roleKeys as RoleKey[]) || [];

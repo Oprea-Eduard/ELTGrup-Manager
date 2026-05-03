@@ -37,11 +37,11 @@ export function TeamCreateForm({ users, workers }: { users: UserOption[]; worker
     <form action={formAction} className="grid gap-3 md:grid-cols-2">
       <div>
         <Input name="name" placeholder="Nume echipa" required />
-        {state.errors?.name ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.name[0]}</p> : null}
+        {state.errors?.name ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.name[0]}</p> : null}
       </div>
       <div>
         <Input name="code" placeholder="Cod echipa, ex. ELT-01" required />
-        {state.errors?.code ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.code[0]}</p> : null}
+        {state.errors?.code ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.code[0]}</p> : null}
       </div>
       <Input name="region" placeholder="Zona / regiune" />
       <select
@@ -62,8 +62,8 @@ export function TeamCreateForm({ users, workers }: { users: UserOption[]; worker
         {workers.length ? (
           <div className="mt-2 grid max-h-56 gap-2 overflow-y-auto pr-1 md:grid-cols-2">
             {workers.map((worker) => (
-              <label key={worker.id} className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[rgba(10,18,28,0.42)] px-3 py-2 text-sm text-[var(--foreground)]">
-                <input type="checkbox" name="memberIds" value={worker.id} className="mt-1 h-4 w-4 accent-[#8dc1f5]" />
+              <label key={worker.id} className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-[var(--foreground)] ${!worker.teamName ? "border-[var(--success)]/20 bg-[var(--success)]/5" : "border-[var(--border)] bg-[var(--surface)]/20"}`}>
+                <input type="checkbox" name="memberIds" value={worker.id} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
                 <span className="min-w-0">
                   <span className="block truncate">{worker.label}</span>
                   <span className="block text-xs text-[var(--muted)]">{worker.teamName ? `Acum in ${worker.teamName}` : "Fara echipa"}</span>

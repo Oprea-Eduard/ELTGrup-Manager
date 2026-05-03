@@ -10,7 +10,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import { Card } from "@/src/components/ui/card";
 
@@ -21,12 +20,25 @@ type ProfitData = {
   profit: number;
 };
 
+const toRON = (value: number) => `${value.toLocaleString()} RON`;
+
 export function ProfitabilityChart({ data }: { data: ProfitData[] }) {
+  if (data.length === 0) {
+    return (
+      <Card className="p-6">
+        <h3 className="mb-2 text-lg font-bold text-[var(--foreground)]">Analiză Profitabilitate pe Proiect</h3>
+        <div className="flex h-[300px] items-center justify-center text-sm text-[var(--muted)]">
+          Nu există date de profitabilitate disponibile.
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold">Analiză Profitabilitate pe Proiect</h3>
+          <h3 className="text-lg font-bold text-[var(--foreground)]">Analiză Profitabilitate pe Proiect</h3>
           <p className="text-sm text-[var(--muted)]">Compararea veniturilor cu cheltuielile reale</p>
         </div>
       </div>
@@ -39,19 +51,19 @@ export function ProfitabilityChart({ data }: { data: ProfitData[] }) {
             barGap={8}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis 
-              dataKey="name" 
-              stroke="var(--muted-strong)" 
+            <XAxis
+              dataKey="name"
+              stroke="var(--muted-strong)"
               fontSize={12}
               tickLine={false}
               axisLine={false}
             />
-            <YAxis 
-              stroke="var(--muted-strong)" 
+            <YAxis
+              stroke="var(--muted-strong)"
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `${value.toLocaleString()} RON`}
+              tickFormatter={toRON}
             />
             <Tooltip
               contentStyle={{
@@ -61,20 +73,21 @@ export function ProfitabilityChart({ data }: { data: ProfitData[] }) {
                 color: "var(--foreground)",
               }}
               itemStyle={{ fontSize: "12px" }}
+              formatter={(value) => [toRON(Number(value))]}
             />
             <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: "20px" }} />
-            <Bar 
-              dataKey="revenue" 
-              name="Venituri" 
-              fill="#74a2d4" 
-              radius={[4, 4, 0, 0]} 
+            <Bar
+              dataKey="revenue"
+              name="Venituri"
+              fill="var(--accent)"
+              radius={[4, 4, 0, 0]}
               barSize={32}
             />
-            <Bar 
-              dataKey="costs" 
-              name="Cheltuieli" 
-              fill="#e11d48" 
-              radius={[4, 4, 0, 0]} 
+            <Bar
+              dataKey="costs"
+              name="Cheltuieli"
+              fill="var(--danger)"
+              radius={[4, 4, 0, 0]}
               barSize={32}
             />
           </BarChart>

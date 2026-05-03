@@ -119,7 +119,7 @@ export default async function OfertePage() {
                             <form action={updateOfferStatus}>
                               <input type="hidden" name="id" value={offer.id} />
                               <input type="hidden" name="status" value="ACCEPTED" />
-                              <Button type="submit" variant="ghost" size="sm" className="h-7 px-2 text-xs text-emerald-400">
+                              <Button type="submit" variant="ghost" size="sm" className="h-7 px-2 text-xs text-[var(--success)]">
                                 Accepta
                               </Button>
                             </form>

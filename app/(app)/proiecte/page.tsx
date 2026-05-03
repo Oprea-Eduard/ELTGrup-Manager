@@ -15,6 +15,7 @@ import { projectScopeWhere, resolveAccessScope } from "@/src/lib/access-scope";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
+import { cn } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { bulkProjectsAction, deleteProject, updateProjectStatusAction } from "./actions";
 import { ProjectCreateForm } from "./project-create-form";
@@ -50,27 +51,51 @@ function buildProiecteHref({
   page,
   q,
   status,
+  bulk,
 }: {
   page?: number;
   q?: string;
   status?: ProjectStatus | null;
+  bulk?: boolean;
 }) {
   return buildListHref("/proiecte", {
     page,
     q,
     status: status || undefined,
+    bulk: bulk ? "1" : undefined,
   });
+}
+
+function PaginationLink({ href, label, disabled }: { href: string | null; label: string; disabled?: boolean }) {
+  if (disabled || !href) {
+    return (
+      <span className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted)] opacity-40 sm:flex-none">
+        {label}
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none",
+      )}
+    >
+      {label}
+    </Link>
+  );
 }
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string; bulk?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q?.trim() || "";
   const statusFilter = parseEnumParam(params.status, Object.values(ProjectStatus));
   const page = parsePositiveIntParam(params.page);
+  const bulkOpen = params.bulk === "1";
   const pageSize = 10;
   const session = await auth();
   const scope = session?.user
@@ -129,6 +154,9 @@ export default async function ProjectsPage({
     take,
   });
 
+  const bulkHref = buildProiecteHref({ page: currentPage, q: query, status: statusFilter, bulk: !bulkOpen });
+  const closeBulkHref = buildProiecteHref({ page: currentPage, q: query, status: statusFilter });
+
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
       <div className="space-y-6">
@@ -155,40 +183,49 @@ export default async function ProjectsPage({
 
         {canUpdate || canDelete ? (
           <Card className="bulk-zone">
-            <details>
-              <summary>Actiuni bulk proiecte</summary>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Actiuni in masa</p>
+              <Link href={bulkHref} className="text-xs font-semibold text-[var(--accent)] hover:underline">
+                {bulkOpen ? "Ascunde" : "Deschide"}
+              </Link>
+            </div>
+            {bulkOpen ? (
               <form action={bulkProjectsAction} className="mt-3 space-y-3">
-              <div className="bulk-controls grid gap-2 md:grid-cols-3">
-                <select
-                  name="operation"
-                  defaultValue={canUpdate ? "SET_STATUS" : "ARCHIVE"}
-                >
-                  {canUpdate ? <option value="SET_STATUS">Actualizeaza status</option> : null}
-                  {canDelete ? <option value="ARCHIVE">Arhiveaza (soft delete)</option> : null}
-                </select>
-                <select name="status" defaultValue={ProjectStatus.ACTIVE} disabled={!canUpdate}>
-                  {projectStatusOptions.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-                <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi executia actiunii bulk pe proiectele selectate?" />
-              </div>
-              <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                <div className="grid gap-1 md:grid-cols-2">
-                  {projects.map((project) => (
-                    <label key={project.id} className="flex items-center gap-2 text-sm text-[#d9e8fb]">
-                      <input type="checkbox" name="ids" value={project.id} className="h-4 w-4" />
-                      <span>
-                        {project.code} - {project.title}
-                      </span>
-                    </label>
-                  ))}
+                <div className="bulk-controls grid gap-2 md:grid-cols-3">
+                  <select
+                    name="operation"
+                    defaultValue={canUpdate ? "SET_STATUS" : "ARCHIVE"}
+                    className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+                  >
+                    {canUpdate ? <option value="SET_STATUS">Actualizeaza status</option> : null}
+                    {canDelete ? <option value="ARCHIVE">Arhiveaza (soft delete)</option> : null}
+                  </select>
+                  <select name="status" defaultValue={ProjectStatus.ACTIVE} disabled={!canUpdate} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)] disabled:opacity-50">
+                    {projectStatusOptions.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi executia actiunii bulk pe proiectele selectate?" />
                 </div>
-              </div>
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <div className="grid gap-1 md:grid-cols-2">
+                    {projects.map((project) => (
+                      <label key={project.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
+                        <input type="checkbox" name="ids" value={project.id} className="h-4 w-4 accent-[var(--accent)]" />
+                        <span>
+                          {project.code} - {project.title}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <Link href={closeBulkHref} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">
+                  Inchide bulk
+                </Link>
               </form>
-            </details>
+            ) : null}
           </Card>
         ) : null}
 
@@ -197,7 +234,7 @@ export default async function ProjectsPage({
           <form className="mb-4 mt-2 grid gap-3 md:grid-cols-3">
             <Input name="q" placeholder="Filtru dupa nume proiect" defaultValue={query} />
             <input type="hidden" name="page" value="1" />
-            <select name="status" defaultValue={statusFilter || ""}>
+            <select name="status" defaultValue={statusFilter || ""} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]">
               <option value="">Toate statusurile</option>
               {projectStatusOptions.map((status) => (
                 <option key={status.value} value={status.value}>
@@ -221,17 +258,17 @@ export default async function ProjectsPage({
                   <div key={project.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.5),rgba(15,25,37,0.5))] p-5 shadow-sm active:bg-[var(--surface-2)]">
                     <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border)]/50 pb-3">
                       <div className="min-w-0 flex-1">
-                        <Link href={`/proiecte/${project.id}`} className="block truncate text-lg font-bold text-[var(--foreground)] hover:text-[#9bc2ea]">
+                        <Link href={`/proiecte/${project.id}`} className="block truncate text-lg font-bold text-[var(--foreground)] hover:text-[var(--accent-strong)]">
                           {project.title}
                         </Link>
-                        <p className="mt-0.5 font-mono text-[11px] font-medium uppercase tracking-wider text-[#9fb9d7]">{project.code}</p>
+                        <p className="mt-0.5 font-mono text-[11px] font-medium uppercase tracking-wider text-[var(--muted-strong)]">{project.code}</p>
                       </div>
                       <Badge tone={status.tone} className="shrink-0">{status.label}</Badge>
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
-                        <div className="h-1.5 w-1.5 rounded-full bg-[#8dc1f5]" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
                         <span className="truncate">{project.client.name}</span>
                       </div>
                       
@@ -312,7 +349,7 @@ export default async function ProjectsPage({
                       <tr key={project.id}>
                         <TD>{project.code}</TD>
                         <TD>
-                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#d4e8ff] hover:text-[#f0f8ff] hover:underline">
+                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[var(--accent-strong)] hover:text-[var(--foreground)] hover:underline">
                             {project.title}
                           </Link>
                           <p className="text-xs text-[var(--muted)]">{project.siteAddress}</p>
@@ -375,30 +412,16 @@ export default async function ProjectsPage({
               Pagina <span className="text-[var(--foreground)]">{currentPage}</span> din <span className="text-[var(--foreground)]">{totalPages}</span>
             </span>
             <div className="flex w-full gap-3 sm:w-auto">
-              {currentPage > 1 ? (
-                <Link
-                  href={buildProiecteHref({
-                    page: currentPage - 1,
-                    q: query || undefined,
-                    status: statusFilter,
-                  })}
-                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
-                >
-                  Anterior
-                </Link>
-              ) : null}
-              {currentPage < totalPages ? (
-                <Link
-                  href={buildProiecteHref({
-                    page: currentPage + 1,
-                    q: query || undefined,
-                    status: statusFilter,
-                  })}
-                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
-                >
-                  Urmator
-                </Link>
-              ) : null}
+              <PaginationLink
+                href={currentPage > 1 ? buildProiecteHref({ page: currentPage - 1, q: query, status: statusFilter }) : null}
+                label="Anterior"
+                disabled={currentPage <= 1}
+              />
+              <PaginationLink
+                href={currentPage < totalPages ? buildProiecteHref({ page: currentPage + 1, q: query, status: statusFilter }) : null}
+                label="Urmator"
+                disabled={currentPage >= totalPages}
+              />
             </div>
           </div>
         </Card>

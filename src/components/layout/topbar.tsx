@@ -73,10 +73,12 @@ export async function Topbar({
             >
               <Bell className="h-4 w-4" />
               {unreadNotifications > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border border-[color-mix(in oklab,var(--danger) 60%,var(--shell) 40%)] bg-[var(--danger)] px-1 text-[10px] font-semibold text-[var(--foreground)]">
-                  {unreadNotifications}
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full border border-[color-mix(in oklab,var(--danger) 60%,var(--shell) 40%)] bg-[var(--danger)] px-1 text-[10px] font-semibold text-white">
+                  {unreadNotifications > 99 ? "99+" : unreadNotifications}
                 </span>
-              ) : null}
+              ) : (
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-[var(--surface-card)] bg-[var(--muted)]" />
+              )}
             </Link>
           ) : null}
 

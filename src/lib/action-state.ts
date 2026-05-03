@@ -10,6 +10,10 @@ export type ActionState = {
 
 export const initialActionState: ActionState = { ok: false };
 
+export function successAction(message?: string): ActionState {
+  return { ok: true, message };
+}
+
 export function fromZodError(error: z.ZodError): ActionState {
   return {
     ok: false,

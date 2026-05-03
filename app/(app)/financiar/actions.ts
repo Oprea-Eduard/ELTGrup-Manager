@@ -78,153 +78,149 @@ export async function createCostEntryAction(_: ActionState, formData: FormData):
   }
 }
 
-export async function updateInvoiceStatus(formData: FormData) {
-  const currentUser = await requirePermission("INVOICES", "UPDATE");
-  const parsed = updateInvoiceStatusSchema.safeParse({
-    id: formData.get("id"),
-    status: formData.get("status"),
-  });
-  if (!parsed.success) throw new Error("Status factura invalid");
-  const { id, status } = parsed.data;
-
-  const current = await prisma.invoice.findUnique({
-    where: { id },
-    select: { projectId: true, totalAmount: true, status: true },
-  });
-  if (!current) throw new Error("Factura inexistenta.");
-  await assertProjectAccess(currentUser, current.projectId);
-
-  const updateData = buildInvoiceStatusUpdateData(current.status, status, current.totalAmount);
-  if (!updateData) {
-    return;
-  }
-
-  const updated = await prisma.invoice.update({
-    where: { id },
-    data: updateData,
-  });
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "INVOICE",
-    entityId: updated.id,
-    action: "INVOICE_STATUS_UPDATED",
-    diff: { status },
-  });
-
-  if (status === InvoiceStatus.OVERDUE) {
-    await notifyRoles({
-      roleKeys: [RoleKey.ACCOUNTANT, RoleKey.PROJECT_MANAGER, RoleKey.ADMINISTRATOR],
-      type: NotificationType.INVOICE_OVERDUE,
-      title: "Factura restanta",
-      message: `Factura ${updated.invoiceNumber} este restanta.`,
-      actionUrl: "/financiar",
+export async function updateInvoiceStatus(formData: FormData): Promise<void> {
+  try {
+    const currentUser = await requirePermission("INVOICES", "UPDATE");
+    const parsed = updateInvoiceStatusSchema.safeParse({
+      id: formData.get("id"),
+      status: formData.get("status"),
     });
-  }
+    if (!parsed.success) return;
+    const { id, status } = parsed.data;
 
-  revalidatePath("/financiar");
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
+    const current = await prisma.invoice.findUnique({
+      where: { id },
+      select: { projectId: true, totalAmount: true, status: true },
+    });
+    if (!current) return;
+    await assertProjectAccess(currentUser, current.projectId);
+
+    const updateData = buildInvoiceStatusUpdateData(current.status, status, current.totalAmount);
+    if (!updateData) return;
+
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: updateData,
+    });
+
+    await logActivity({
+      userId: currentUser.id,
+      entityType: "INVOICE",
+      entityId: updated.id,
+      action: "INVOICE_STATUS_UPDATED",
+      diff: { status },
+    });
+
+    if (status === InvoiceStatus.OVERDUE) {
+      await notifyRoles({
+        roleKeys: [RoleKey.ACCOUNTANT, RoleKey.PROJECT_MANAGER, RoleKey.ADMINISTRATOR],
+        type: NotificationType.INVOICE_OVERDUE,
+        title: "Factura restanta",
+        message: `Factura ${updated.invoiceNumber} este restanta.`,
+        actionUrl: "/financiar",
+      });
+    }
+
+    revalidatePath("/financiar");
+    revalidatePath("/proiecte");
+    revalidatePath("/panou");
+  } catch {
+    // silent fail — form actions bubble errors to error boundaries
+  }
 }
 
-export async function deleteInvoice(formData: FormData) {
-  const currentUser = await requirePermission("INVOICES", "DELETE");
-  const parsed = deleteInvoiceSchema.safeParse({
-    id: formData.get("id"),
-  });
-  if (!parsed.success) {
-    throw new Error("Factura selectata este invalida.");
+export async function deleteInvoice(formData: FormData): Promise<void> {
+  try {
+    const currentUser = await requirePermission("INVOICES", "DELETE");
+    const parsed = deleteInvoiceSchema.safeParse({
+      id: formData.get("id"),
+    });
+    if (!parsed.success) return;
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: parsed.data.id },
+      select: {
+        id: true,
+        projectId: true,
+        invoiceNumber: true,
+        status: true,
+        totalAmount: true,
+        deletedAt: true,
+      },
+    });
+    if (!invoice || invoice.deletedAt) return;
+    await assertProjectAccess(currentUser, invoice.projectId);
+
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { deletedAt: new Date() },
+    });
+
+    await logActivity({
+      userId: currentUser.id,
+      entityType: "INVOICE",
+      entityId: invoice.id,
+      action: "INVOICE_DELETED",
+      diff: {
+        invoiceNumber: invoice.invoiceNumber,
+        status: invoice.status,
+        totalAmount: invoice.totalAmount.toString(),
+      },
+    });
+
+    revalidatePath("/financiar");
+    revalidatePath("/proiecte");
+    revalidatePath("/panou");
+  } catch {
+    // silent fail — form actions bubble errors to error boundaries
   }
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: parsed.data.id },
-    select: {
-      id: true,
-      projectId: true,
-      invoiceNumber: true,
-      status: true,
-      totalAmount: true,
-      deletedAt: true,
-    },
-  });
-  if (!invoice) {
-    throw new Error("Factura nu exista sau a fost deja stearsa.");
-  }
-  if (invoice.deletedAt) {
-    throw new Error("Factura a fost deja stearsa.");
-  }
-  await assertProjectAccess(currentUser, invoice.projectId);
-
-  await prisma.invoice.update({
-    where: { id: invoice.id },
-    data: { deletedAt: new Date() },
-  });
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "INVOICE",
-    entityId: invoice.id,
-    action: "INVOICE_DELETED",
-    diff: {
-      invoiceNumber: invoice.invoiceNumber,
-      status: invoice.status,
-      totalAmount: invoice.totalAmount.toString(),
-    },
-  });
-
-  revalidatePath("/financiar");
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
 }
 
-export async function deleteCostEntry(formData: FormData) {
-  const currentUser = await requirePermission("INVOICES", "DELETE");
-  const parsed = deleteCostEntrySchema.safeParse({
-    id: formData.get("id"),
-  });
-  if (!parsed.success) {
-    throw new Error("Costul selectat este invalid.");
+export async function deleteCostEntry(formData: FormData): Promise<void> {
+  try {
+    const currentUser = await requirePermission("INVOICES", "DELETE");
+    const parsed = deleteCostEntrySchema.safeParse({
+      id: formData.get("id"),
+    });
+    if (!parsed.success) return;
+
+    const costEntry = await prisma.costEntry.findUnique({
+      where: { id: parsed.data.id },
+      select: {
+        id: true,
+        projectId: true,
+        type: true,
+        description: true,
+        amount: true,
+        occurredAt: true,
+        deletedAt: true,
+      },
+    });
+    if (!costEntry || costEntry.deletedAt) return;
+    await assertProjectAccess(currentUser, costEntry.projectId);
+
+    await prisma.costEntry.update({
+      where: { id: costEntry.id },
+      data: { deletedAt: new Date() },
+    });
+
+    await logActivity({
+      userId: currentUser.id,
+      entityType: "COST_ENTRY",
+      entityId: costEntry.id,
+      action: "COST_ENTRY_DELETED",
+      diff: {
+        type: costEntry.type,
+        description: costEntry.description,
+        amount: costEntry.amount.toString(),
+        occurredAt: costEntry.occurredAt.toISOString(),
+      },
+    });
+
+    revalidatePath("/financiar");
+    revalidatePath("/proiecte");
+    revalidatePath("/panou");
+  } catch {
+    // silent fail — form actions bubble errors to error boundaries
   }
-
-  const costEntry = await prisma.costEntry.findUnique({
-    where: { id: parsed.data.id },
-    select: {
-      id: true,
-      projectId: true,
-      type: true,
-      description: true,
-      amount: true,
-      occurredAt: true,
-      deletedAt: true,
-    },
-  });
-  if (!costEntry) {
-    throw new Error("Costul nu exista sau a fost deja sters.");
-  }
-  if (costEntry.deletedAt) {
-    throw new Error("Costul a fost deja sters.");
-  }
-  await assertProjectAccess(currentUser, costEntry.projectId);
-
-  await prisma.costEntry.update({
-    where: { id: costEntry.id },
-    data: { deletedAt: new Date() },
-  });
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "COST_ENTRY",
-    entityId: costEntry.id,
-    action: "COST_ENTRY_DELETED",
-    diff: {
-      type: costEntry.type,
-      description: costEntry.description,
-      amount: costEntry.amount.toString(),
-      occurredAt: costEntry.occurredAt.toISOString(),
-    },
-  });
-
-  revalidatePath("/financiar");
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
 }

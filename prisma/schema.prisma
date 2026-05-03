@@ -51,6 +51,8 @@ model User {
 
   @@index([email, isActive, deletedAt])
   @@index([createdAt, deletedAt])
+  @@index([lastLoginAt])
+  @@index([deletedAt, isActive])
 }
 
 model Role {
@@ -108,6 +110,8 @@ model Team {
   workers    WorkerProfile[]
 
   @@index([region, deletedAt])
+  @@index([isActive, deletedAt])
+  @@index([leadUserId])
 }
 
 model WorkerProfile {
@@ -125,6 +129,9 @@ model WorkerProfile {
   updatedAt        DateTime  @updatedAt
   team             Team?     @relation(fields: [teamId], references: [id])
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([deletedAt])
 }
 
 model Client {
@@ -313,6 +320,7 @@ model ProjectPhase {
 
   @@index([projectId, position])
   @@index([projectId, type])
+  @@index([projectId, startDate])
 }
 
 model WorkOrder {
@@ -357,6 +365,7 @@ model WorkOrder {
   @@index([teamId, startDate, deletedAt])
   @@index([dueDate, priority, deletedAt])
   @@index([projectId, status, deletedAt])
+  @@index([approvedById])
 }
 
 model TaskChecklistItem {
@@ -371,6 +380,7 @@ model TaskChecklistItem {
   workOrder       WorkOrder        @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 
   @@index([workOrderId, isDone])
+  @@index([doneAt])
 }
 
 model TimeEntry {
@@ -499,6 +509,8 @@ model MaterialRequest {
 
   @@index([projectId, status])
   @@index([requestedAt])
+  @@index([approvedById])
+  @@index([materialId])
 }
 
 model ProjectMaterialUsage {
@@ -549,6 +561,7 @@ model EquipmentAssignment {
 
   @@index([equipmentId, startAt])
   @@index([projectId])
+  @@index([assignedUserId])
 }
 
 model InventoryCategory {
@@ -625,6 +638,8 @@ model InventoryItem {
   @@index([nextInspectionDate])
   @@index([expiryDate])
   @@index([serialNumber])
+  @@index([createdById])
+  @@index([locationId])
 }
 
 model InventoryAssignment {
@@ -658,6 +673,8 @@ model InventoryAssignment {
   @@index([projectId, status])
   @@index([issuedToUserId, status])
   @@index([returnedAt])
+  @@index([issuedById])
+  @@index([returnedById])
 }
 
 model InventoryMovement {
@@ -764,6 +781,8 @@ model Document {
 
   @@index([projectId, category])
   @@index([expiresAt])
+  @@index([uploadedById])
+  @@index([workOrderId])
 }
 
 model Invoice {
@@ -815,6 +834,7 @@ model CostEntry {
   @@index([projectId, type])
   @@index([occurredAt])
   @@index([deletedAt])
+  @@index([approvedById])
 }
 
 model DailySiteReport {
@@ -840,6 +860,8 @@ model DailySiteReport {
   workOrder             WorkOrder? @relation(fields: [workOrderId], references: [id])
 
   @@index([projectId, reportDate])
+  @@index([createdById])
+  @@index([workOrderId])
 }
 
 model Notification {
@@ -854,6 +876,7 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, createdAt])
+  @@index([type, createdAt])
 }
 
 model Comment {

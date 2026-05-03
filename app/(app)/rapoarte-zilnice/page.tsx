@@ -153,15 +153,15 @@ export default async function RapoarteZilnicePage({
 
         <section className="grid gap-3 md:grid-cols-3">
           <Card>
-            <p className="text-xs text-[#9fb2ce]">Rapoarte recente</p>
+            <p className="text-xs text-[var(--muted)]">Rapoarte recente</p>
             <p className="mt-2 text-2xl font-semibold">{totalReports}</p>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2ce]">Rapoarte cu blocaje</p>
+            <p className="text-xs text-[var(--muted)]">Rapoarte cu blocaje</p>
             <p className="mt-2 text-2xl font-semibold">{blockersCount}</p>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2ce]">Total muncitori raportati</p>
+            <p className="text-xs text-[var(--muted)]">Total muncitori raportati</p>
             <p className="mt-2 text-2xl font-semibold">{totalWorkers}</p>
           </Card>
         </section>

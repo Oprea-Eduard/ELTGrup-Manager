@@ -17,7 +17,7 @@ type Option = { id: string; label: string };
 
 const fieldLabelClass = "text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]";
 const selectClassName =
-  "h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)] disabled:cursor-not-allowed disabled:opacity-60";
+  "h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-60";
 const helperClassName = "text-xs text-[var(--muted)]";
 const stockMovementLabels: Record<StockMovementType, string> = {
   IN: "Intrare in depozit",
@@ -91,7 +91,7 @@ export function MaterialRequestForm({ projects, materials }: { projects: Option[
       <Field label="Observatii" hint="Optional: necesar special, detalii de executie, urgenta.">
         <Input name="note" placeholder="Detalii suplimentare" />
       </Field>
-      {state.errors?.quantity ? <p className="md:col-span-2 text-xs text-[#ffb4bd]">{state.errors.quantity[0]}</p> : null}
+      {state.errors?.quantity ? <p className="md:col-span-2 text-xs text-[var(--danger)]">{state.errors.quantity[0]}</p> : null}
       <div className="md:col-span-2 flex justify-end">
         <Button type="submit" disabled={pending}>
           {pending ? "Se trimite..." : "Trimite cerere"}
@@ -170,7 +170,7 @@ export function StockMovementForm({
       <Field label="Observatii" hint="Ex: aviz, retur santier, corectie inventar sau motivul iesirii.">
         <Input name="note" placeholder="Detalii miscarea" />
       </Field>
-      {state.errors?.quantity ? <p className="md:col-span-2 text-xs text-[#ffb4bd]">{state.errors.quantity[0]}</p> : null}
+      {state.errors?.quantity ? <p className="md:col-span-2 text-xs text-[var(--danger)]">{state.errors.quantity[0]}</p> : null}
       <div className="md:col-span-2 flex justify-end">
         <Button type="submit" variant="secondary" disabled={pending}>
           {pending ? "Se salveaza..." : "Inregistreaza miscarea"}

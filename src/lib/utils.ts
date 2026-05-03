@@ -35,3 +35,22 @@ export function formatDateTime(value: Date | string) {
 export function fullName(firstName?: string | null, lastName?: string | null) {
   return [firstName, lastName].filter(Boolean).join(" ") || "-";
 }
+
+export function formatPercent(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+export function truncate(str: string, maxLen: number): string {
+  if (str.length <= maxLen) return str;
+  return str.slice(0, maxLen).trimEnd() + "…";
+}
+
+const romanianPluralRules = new Intl.PluralRules("ro-RO");
+
+export function pluralize(count: number, singular: string, plural?: string): string {
+  if (plural) return count === 1 ? singular : plural;
+  const rule = romanianPluralRules.select(count);
+  if (rule === "one") return singular;
+  if (rule === "few") return singular + "i";
+  return singular + "uri";
+}

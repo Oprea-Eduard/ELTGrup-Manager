@@ -1,7 +1,21 @@
 import { cn } from "@/src/lib/utils";
 import type { ReactNode } from "react";
 
-export function SectionCard({ title, subtitle, children, action }: { title: string; subtitle?: string; children: ReactNode; action?: ReactNode }) {
+export function SectionCard({
+  title,
+  subtitle,
+  children,
+  action,
+  spacing = "md",
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  action?: ReactNode;
+  spacing?: "sm" | "md" | "lg";
+}) {
+  const spacingMap = { sm: "px-4 py-1", md: "px-5 py-2", lg: "px-6 py-3" };
+
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] shadow-[var(--shadow-panel)]">
       {(title || action) && (
@@ -13,12 +27,24 @@ export function SectionCard({ title, subtitle, children, action }: { title: stri
           {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
-      <div className="divide-y divide-[var(--border)]/50 px-5 py-2">{children}</div>
+      <div className={cn("divide-y divide-[var(--border)]/50", spacingMap[spacing])}>{children}</div>
     </div>
   );
 }
 
-export function SectionCardSimple({ title, children, className }: { title?: string; children: ReactNode; className?: string }) {
+export function SectionCardSimple({
+  title,
+  children,
+  className,
+  padding = "md",
+}: {
+  title?: string;
+  children: ReactNode;
+  className?: string;
+  padding?: "sm" | "md" | "lg";
+}) {
+  const paddingMap = { sm: "p-3 sm:p-4", md: "p-4 sm:p-5", lg: "p-5 sm:p-6" };
+
   return (
     <div className={cn("rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] shadow-[var(--shadow-panel)]", className)}>
       {title && (
@@ -26,7 +52,7 @@ export function SectionCardSimple({ title, children, className }: { title?: stri
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{title}</p>
         </div>
       )}
-      <div className="p-4 sm:p-5">{children}</div>
+      <div className={paddingMap[padding]}>{children}</div>
     </div>
   );
 }

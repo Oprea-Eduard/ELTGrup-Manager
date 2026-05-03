@@ -9,6 +9,7 @@ export function checkRateLimit(
 
   if (!record || now > record.resetAt) {
     rateLimitMap.set(key, { count: 1, resetAt: now + opts.windowMs });
+    startCleanup();
     return;
   }
 
@@ -17,6 +18,27 @@ export function checkRateLimit(
   }
 
   record.count++;
+}
+
+const CLEANUP_INTERVAL_MS = 60_000;
+
+let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+function startCleanup() {
+  if (cleanupTimer) return;
+  cleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of rateLimitMap) {
+      if (now > record.resetAt) {
+        rateLimitMap.delete(key);
+      }
+    }
+    if (rateLimitMap.size === 0 && cleanupTimer) {
+      clearInterval(cleanupTimer);
+      cleanupTimer = null;
+    }
+  }, CLEANUP_INTERVAL_MS);
+  if (cleanupTimer.unref) cleanupTimer.unref();
 }
 
 export function withRateLimit<R>(

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { toast } from "sonner";
-import { OfferStatus, ProjectType } from "@prisma/client";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
@@ -21,14 +20,14 @@ export function OfferCreateForm({ clients }: { clients: ClientOption[] }) {
     { id: 0, name: "", quantity: "1", unitPrice: "", description: "", category: "" },
   ]);
 
-  if (state.ok && state.message) {
-    toast.success(state.message);
-    state.ok = false;
-    setTimeout(() => router.push("/oferte"), 800);
-  }
-  if (!state.ok && state.message) {
-    toast.error(state.message);
-  }
+  useEffect(() => {
+    if (state.ok && state.message) {
+      toast.success(state.message);
+      setTimeout(() => router.push("/oferte"), 800);
+    } else if (!state.ok && state.message) {
+      toast.error(state.message);
+    }
+  }, [state, router]);
 
   function addItem() {
     setItems((prev) => [...prev, { id: Date.now(), name: "", quantity: "1", unitPrice: "", description: "", category: "" }]);
@@ -56,7 +55,7 @@ export function OfferCreateForm({ clients }: { clients: ClientOption[] }) {
           <div className="space-y-1.5">
             <label className="field-label">Titlu oferta</label>
             <Input name="title" placeholder="Ex: Instalatii electrice + PSI - Hala SIGEMO" required />
-            {state.errors?.title ? <p className="text-xs text-[#ffb4bd]">{state.errors.title[0]}</p> : null}
+            {state.errors?.title ? <p className="text-xs text-[var(--danger)]">{state.errors.title[0]}</p> : null}
           </div>
           <div className="space-y-1.5">
             <label className="field-label">Client</label>

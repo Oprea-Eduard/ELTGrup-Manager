@@ -7,6 +7,7 @@ const {
   mockTimeEntryScopeWhere,
   mockToCsv,
   mockPrisma,
+  mockRequirePermission,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockHasPermission: vi.fn(),
@@ -19,6 +20,13 @@ const {
     material: { findMany: vi.fn() },
     dailySiteReport: { findMany: vi.fn() },
   },
+  mockRequirePermission: vi.fn(() =>
+    Promise.resolve({
+      id: "user-1",
+      email: "test@example.com",
+      roleKeys: ["ADMINISTRATOR"],
+    }),
+  ),
 }));
 
 vi.mock("@/src/lib/auth", () => ({
@@ -41,6 +49,18 @@ vi.mock("@/src/lib/csv", () => ({
 vi.mock("@/src/lib/prisma", () => ({
   prisma: mockPrisma,
 }));
+
+vi.mock("@/src/lib/permissions", () => ({
+  requirePermission: mockRequirePermission,
+}));
+
+vi.mock("@/src/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(),
+}));
+
+function mockNextRequest(url: string) {
+  return { nextUrl: new URL(url), headers: new Headers() } as any;
+}
 
 describe("export route ordering", () => {
   beforeEach(() => {
@@ -113,7 +133,7 @@ describe("export route ordering", () => {
 
   it("uses deterministic order for pontaj export", async () => {
     const { GET: getPontajExport } = await import("../../app/api/export/pontaj/route");
-    const request = new Request("http://localhost/api/export/pontaj?month=1&year=2026");
+    const request = mockNextRequest("http://localhost/api/export/pontaj?month=1&year=2026");
     await getPontajExport(request);
 
     expect(mockPrisma.timeEntry.findMany).toHaveBeenCalledWith(
@@ -125,7 +145,8 @@ describe("export route ordering", () => {
 
   it("uses deterministic order for financiar export", async () => {
     const { GET: getFinanciarExport } = await import("../../app/api/export/financiar/route");
-    await getFinanciarExport();
+    const request = mockNextRequest("http://localhost/api/export/financiar");
+    await getFinanciarExport(request);
 
     expect(mockPrisma.invoice.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -136,7 +157,8 @@ describe("export route ordering", () => {
 
   it("uses deterministic order for materiale export", async () => {
     const { GET: getMaterialeExport } = await import("../../app/api/export/materiale/route");
-    await getMaterialeExport();
+    const request = mockNextRequest("http://localhost/api/export/materiale");
+    await getMaterialeExport(request);
 
     expect(mockPrisma.material.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -147,7 +169,8 @@ describe("export route ordering", () => {
 
   it("uses deterministic order for rapoarte export", async () => {
     const { GET: getRapoarteExport } = await import("../../app/api/export/rapoarte/route");
-    await getRapoarteExport();
+    const request = mockNextRequest("http://localhost/api/export/rapoarte");
+    await getRapoarteExport(request);
 
     expect(mockPrisma.dailySiteReport.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

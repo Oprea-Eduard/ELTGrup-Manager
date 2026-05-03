@@ -1,4 +1,4 @@
-import { DocumentCategory, InstallationStatus, InventoryAssignmentStatus, InventoryItemStatus, ProjectStatus } from "@prisma/client";
+import { DocumentCategory, InventoryAssignmentStatus, InventoryItemStatus, ProjectStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
@@ -7,6 +7,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Breadcrumbs } from "@/src/components/ui/breadcrumbs";
 import { Card } from "@/src/components/ui/card";
 import { ListItem, ListItemSlim } from "@/src/components/ui/list-item";
+import { ErrorBoundary } from "@/src/components/ui/error-boundary";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { assertProjectAccess } from "@/src/lib/access-scope";
@@ -14,9 +15,10 @@ import { inventoryItemStatusLabels } from "@/src/lib/inventory-labels";
 import { buildProjectTimeline } from "@/src/lib/timeline";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
-import { InstallationForm } from "../installations/installation-form";
-import { updateInstallationStatus, archiveInstallation } from "../installations/actions";
 import { PermitTracker } from "../avize/permit-tracker";
+import { ProjectInstallations } from "./project-installations";
+import { ProjectPlansSection } from "./project-plans-section";
+import { Suspense } from "react";
 
 const documentCategoryLabels: Record<DocumentCategory, string> = {
   CONTRACT: "Contract",
@@ -110,20 +112,7 @@ function matchesPlanSection(
   return document.tags.some((tag) => normalizeText(tag) === section.sampleTag) || section.searchTerms.some((term) => haystack.includes(normalizeText(term)));
 }
 
-export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const session = await auth();
-  if (session?.user) {
-    await assertProjectAccess(
-      {
-        id: session.user.id,
-        email: session.user.email,
-        roleKeys: session.user.roleKeys || [],
-      },
-      id,
-    ).catch(() => notFound());
-  }
-
+async function ProjectDetailContent({ id }: { id: string }) {
   const project = await prisma.project.findUnique({
     where: { id, deletedAt: null },
     select: {
@@ -268,6 +257,341 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const planDocumentCount = planGroups.reduce((sum, group) => sum + group.docs.length, 0);
 
   return (
+    <>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Card>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Status</p>
+          <div className="mt-2">
+            <Badge tone={project.status === "ACTIVE" ? "success" : project.status === "BLOCKED" ? "danger" : "neutral"}>
+              {projectStatusLabels[project.status]}
+            </Badge>
+          </div>
+        </Card>
+        <Card>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Buget estimat</p>
+          <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
+        </Card>
+        <Card>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Cost real</p>
+          <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalCost)}</p>
+        </Card>
+        <Card>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Facturat</p>
+          <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
+        </Card>
+        <Card>
+          <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Marja estimata</p>
+          <p className={`mt-2 text-xl font-semibold ${estimatedMargin < 0 ? "text-[var(--danger)]" : "text-[var(--success)]"}`}>
+            {formatCurrency(estimatedMargin)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">{estimatedMarginPercent.toFixed(1)}% din venit</p>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari active</h2>
+          <div className="mt-3 space-y-2">
+            {project.workOrders.length === 0 ? (
+              <ListItemSlim className="text-[var(--muted)]">
+                Nu exista lucrari active pe acest proiect.
+              </ListItemSlim>
+            ) : null}
+            {project.workOrders.map((task) => (
+              <ListItemSlim key={task.id} className="flex-col items-start gap-1">
+                <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
+                <p className="text-xs text-[var(--muted-strong)]">
+                  Status {task.status} • Prioritate {task.priority} • Termen {task.dueDate ? formatDate(task.dueDate) : "-"}
+                </p>
+              </ListItemSlim>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Faze proiect</h2>
+          <div className="mt-3 space-y-2">
+            {project.phases.length === 0 ? (
+              <ListItemSlim className="text-[var(--muted)]">
+                Nu exista faze definite pentru acest proiect.
+              </ListItemSlim>
+            ) : null}
+            {project.phases.map((phase) => {
+                const phaseTypeLabels: Record<string, string> = {
+                  OFERTARE: "Ofertare",
+                  PROIECTARE: "Proiectare",
+                  AVIZ_ISU: "Aviz ISU",
+                  AVIZ_SSM: "Aviz SSM",
+                  AVIZ_POMPIERI: "Aviz Pompieri",
+                  EXECUTIE: "Executie",
+                  RECEPTIE_PSI: "Receptie PSI",
+                  MENTENANTA: "Mentenanta",
+                };
+                const phaseCompleted = phase.completed;
+                const phaseOverdue = !phaseCompleted && phase.endDate && new Date(phase.endDate) < new Date();
+                return (
+                  <ListItemSlim key={phase.id} className={`flex-col items-start gap-1.5 ${phaseCompleted ? "border-l-2 border-l-[var(--success)]/30" : ""}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-[var(--muted)]">{String(phase.position).padStart(2, "0")}</span>
+                      <p className="font-semibold text-[var(--foreground)]">{phase.title}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${phaseCompleted ? "bg-[var(--success)]/15 text-[var(--success)]" : phase.type === "AVIZ_ISU" ? "bg-[var(--danger)]/15 text-[var(--danger)]" : "bg-[var(--info)]/15 text-[var(--info)]"}`}>
+                        {phaseTypeLabels[phase.type] || phase.type}
+                      </span>
+                      {phase.startDate ? (
+                        <span className="text-[11px] text-[var(--muted)]">
+                          {formatDate(phase.startDate)}
+                          {phase.endDate ? ` → ${formatDate(phase.endDate)}` : ""}
+                        </span>
+                      ) : null}
+                      {phaseCompleted ? (
+                        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-[var(--success)]">Finalizata</span>
+                      ) : phaseOverdue ? (
+                        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-[var(--danger)]">Termen DEPASIT</span>
+                      ) : phase.endDate ? (
+                        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Termen: {formatDate(phase.endDate)}</span>
+                      ) : null}
+                    </div>
+                  </ListItemSlim>
+                );
+              })}
+          </div>
+        </Card>
+      </section>
+
+      <Card>
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Scule si echipamente pe proiect</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Trasabilitate pentru ce este in teren, la cine este predat si ce stoc mai ramane disponibil.</p>
+          </div>
+          <Link
+            href={`/gestiune-scule?q=${encodeURIComponent(project.code)}`}
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+          >
+            Deschide gestiune scule
+          </Link>
+        </div>
+        <div className="mt-3 space-y-1">
+          {project.inventoryAssignments.length === 0 ? (
+            <ListItemSlim className="text-[var(--muted)]">
+              Nu exista scule active alocate pe acest proiect.
+            </ListItemSlim>
+          ) : null}
+          {project.inventoryAssignments.map((assignment) => (
+            <ListItemSlim key={assignment.id} className="flex-col items-start gap-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                <p className="font-semibold text-[var(--foreground)]">
+                  {assignment.item.name} ({assignment.item.internalCode})
+                </p>
+                <Badge tone={assignment.item.status === InventoryItemStatus.AVAILABLE ? "success" : assignment.item.status === InventoryItemStatus.ASSIGNED ? "info" : "warning"}>
+                  {inventoryItemStatusLabels[assignment.item.status]}
+                </Badge>
+              </div>
+              <p className="text-xs text-[var(--muted)]">
+                Predat catre {assignment.issuedToUser.firstName} {assignment.issuedToUser.lastName} • Cantitate {Number(assignment.quantity).toFixed(2)} {assignment.item.unitOfMeasure}
+              </p>
+              <p className="text-xs text-[var(--muted)]">
+                Disponibil in stoc: {Number(assignment.item.quantityAvailable).toFixed(2)} {assignment.item.unitOfMeasure}
+              </p>
+            </ListItemSlim>
+          ))}
+        </div>
+      </Card>
+
+      <PermissionGuard resource="PROJECTS" action="UPDATE">
+        <Card>
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Instalatii tehnice</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Echipamente instalate, certificari si urmatoare verificari.</p>
+            </div>
+          </div>
+          <ErrorBoundary fallback={<p className="text-sm text-[var(--danger)]">Eroare la incarcarea instalatiilor.</p>}>
+            <ProjectInstallations installations={project.installations} projectId={project.id} />
+          </ErrorBoundary>
+        </Card>
+      </PermissionGuard>
+
+      <ErrorBoundary fallback={<p className="text-sm text-[var(--danger)]">Eroare la incarcarea avizelor.</p>}>
+        <PermitTracker permits={project.permitApplications} projectId={project.id} />
+      </ErrorBoundary>
+
+      <ErrorBoundary fallback={<p className="text-sm text-[var(--danger)]">Eroare la incarcarea planurilor.</p>}>
+        <ProjectPlansSection
+          planGroups={planGroups}
+          generalDocuments={generalDocuments}
+          planDocumentCount={planDocumentCount}
+          projectId={project.id}
+        />
+      </ErrorBoundary>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Card className="xl:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Documente asociate</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Contracte, rapoarte, imagini, avize si alte fisiere care nu se incadreaza in sectiunea de planuri.</p>
+            </div>
+            <Link
+              href={`/documente?projectId=${project.id}`}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+            >
+              Deschide in Documente
+            </Link>
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {generalDocuments.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)] md:col-span-2">
+                Nu exista alte documente asociate acestui proiect.
+              </p>
+            ) : null}
+            {generalDocuments.map((document) => (
+              <div key={document.id} className="rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-4 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="truncate font-semibold text-[var(--foreground)]">{document.title}</p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {document.fileName} • {formatDate(document.createdAt)}
+                    </p>
+                  </div>
+                  <Badge tone={document.isPrivate ? "neutral" : "success"}>{document.isPrivate ? "Privat" : "Public"}</Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge tone="info">{documentCategoryLabels[document.category]}</Badge>
+                  {document.expiresAt ? <Badge tone={document.expiresAt < new Date() ? "warning" : "neutral"}>{`Expira ${formatDate(document.expiresAt)}`}</Badge> : null}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={`/api/documents/${document.id}/download`}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--border-strong)]"
+                  >
+                    Deschide
+                  </a>
+                  {document.workOrder ? (
+                    <Link
+                      href={`/lucrari/${document.workOrder.id}`}
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+                    >
+                      Lucrare
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Consum materiale</h2>
+          <div className="mt-3 space-y-2 text-sm">
+            {project.materialUsage.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                Nu exista consum de materiale inregistrat.
+              </p>
+            ) : null}
+            {project.materialUsage.map((item) => (
+              <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                <p className="font-semibold text-[var(--foreground)]">{item.material.name}</p>
+                <p className="text-xs text-[var(--muted-strong)]">
+                  Consum: {item.quantityUsed.toString()} {item.material.unitOfMeasure}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Facturi</h2>
+          <div className="mt-3 space-y-2 text-sm">
+            {project.invoices.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                Nu exista facturi asociate acestui proiect.
+              </p>
+            ) : null}
+            {project.invoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                <p className="font-semibold text-[var(--foreground)]">{invoice.invoiceNumber}</p>
+                <p className="text-xs text-[var(--muted-strong)]">
+                  {formatCurrency(invoice.totalAmount.toString())} • Scadenta {formatDate(invoice.dueDate)} • {invoice.status}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Rapoarte zilnice</h2>
+          <div className="mt-3 space-y-2 text-sm">
+            {project.dailyReports.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                Nu exista rapoarte zilnice in acest moment.
+              </p>
+            ) : null}
+            {project.dailyReports.map((report) => (
+              <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                <p className="font-semibold text-[var(--foreground)]">{formatDate(report.reportDate)}</p>
+                <p className="text-xs text-[var(--muted-strong)]">{report.workCompleted}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Subcontractori</h2>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {project.subcontractors.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)] md:col-span-2">
+                Nu exista subcontractori alocati pe acest proiect.
+              </p>
+            ) : null}
+            {project.subcontractors.map((assignment) => (
+              <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                <p className="font-semibold text-[var(--foreground)]">{assignment.subcontractor.name}</p>
+                <p className="text-xs text-[var(--muted-strong)]">Status {assignment.status} • Contract {assignment.contractRef || "-"}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Timeline proiect (operational)</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">Un singur fir cronologic pentru update-uri, documente, costuri, materiale, lucrari si facturi.</p>
+        <div className="mt-3">
+          <ActivityTimeline events={timeline} />
+        </div>
+      </Card>
+    </>
+  );
+}
+
+export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const session = await auth();
+  if (session?.user) {
+    await assertProjectAccess(
+      {
+        id: session.user.id,
+        email: session.user.email,
+        roleKeys: session.user.roleKeys || [],
+      },
+      id,
+    ).catch(() => notFound());
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id, deletedAt: null },
+    select: { id: true, title: true, code: true, siteAddress: true, status: true, client: { select: { name: true } } },
+  });
+  if (!project) notFound();
+
+  return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
       <div className="space-y-6">
         <Breadcrumbs items={[
@@ -294,440 +618,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           }
         />
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Status</p>
-            <div className="mt-2">
-              <Badge tone={project.status === "ACTIVE" ? "success" : project.status === "BLOCKED" ? "danger" : "neutral"}>
-                {projectStatusLabels[project.status]}
-              </Badge>
-            </div>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Buget estimat</p>
-            <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Cost real</p>
-            <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalCost)}</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Facturat</p>
-            <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Marja estimata</p>
-            <p className={`mt-2 text-xl font-semibold ${estimatedMargin < 0 ? "text-[var(--danger)]" : "text-emerald-400"}`}>
-              {formatCurrency(estimatedMargin)}
-            </p>
-            <p className="mt-1 text-xs text-[var(--muted)]">{estimatedMarginPercent.toFixed(1)}% din venit</p>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-3">
-          <Card className="xl:col-span-2">
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari active</h2>
-            <div className="mt-3 space-y-2">
-              {project.workOrders.length === 0 ? (
-                <ListItemSlim className="text-[var(--muted)]">
-                  Nu exista lucrari active pe acest proiect.
-                </ListItemSlim>
-              ) : null}
-              {project.workOrders.map((task) => (
-                <ListItemSlim key={task.id} className="flex-col items-start gap-1">
-                  <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
-                  <p className="text-xs text-[#a0b3ce]">
-                    Status {task.status} • Prioritate {task.priority} • Termen {task.dueDate ? formatDate(task.dueDate) : "-"}
-                  </p>
-                </ListItemSlim>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Faze proiect</h2>
-            <div className="mt-3 space-y-2">
-              {project.phases.length === 0 ? (
-                <ListItemSlim className="text-[var(--muted)]">
-                  Nu exista faze definite pentru acest proiect.
-                </ListItemSlim>
-              ) : null}
-              {project.phases.map((phase) => {
-                  const phaseTypeLabels: Record<string, string> = {
-                    OFERTARE: "Ofertare",
-                    PROIECTARE: "Proiectare",
-                    AVIZ_ISU: "Aviz ISU",
-                    AVIZ_SSM: "Aviz SSM",
-                    AVIZ_POMPIERI: "Aviz Pompieri",
-                    EXECUTIE: "Executie",
-                    RECEPTIE_PSI: "Receptie PSI",
-                    MENTENANTA: "Mentenanta",
-                  };
-                  return (
-                    <ListItemSlim key={phase.id} className={`flex-col items-start gap-1.5 ${phase.completed ? "border-l-2 border-l-[rgba(79,156,118,0.5)]" : ""}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-[var(--muted)]">{String(phase.position).padStart(2, "0")}</span>
-                        <p className="font-semibold text-[var(--foreground)]">{phase.title}</p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${phase.completed ? "bg-[rgba(79,156,118,0.18)] text-[#bde7cf]" : phase.type === "AVIZ_ISU" ? "bg-[rgba(190,95,111,0.18)] text-[#f6c7cf]" : "bg-[rgba(94,134,190,0.18)] text-[#cadcf7]"}`}>
-                          {phaseTypeLabels[phase.type] || phase.type}
-                        </span>
-                        {phase.startDate ? (
-                          <span className="text-[11px] text-[var(--muted)]">
-                            {formatDate(phase.startDate)}
-                            {phase.endDate ? ` → ${formatDate(phase.endDate)}` : ""}
-                          </span>
-                        ) : null}
-                        {phase.completed ? (
-                          <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-[#bde7cf]">Finalizata</span>
-                        ) : phase.endDate ? (
-                          <span className={`ml-auto text-[10px] font-semibold uppercase tracking-wider ${new Date(phase.endDate) < new Date() ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}>
-                            {new Date(phase.endDate) < new Date() ? "Termen DEPASIT" : `Termen: ${formatDate(phase.endDate)}`}
-                          </span>
-                        ) : null}
-                      </div>
-                    </ListItemSlim>
-                  );
-                })}
-            </div>
-          </Card>
-        </section>
-
-        <Card>
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--foreground)]">Scule si echipamente pe proiect</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Trasabilitate pentru ce este in teren, la cine este predat si ce stoc mai ramane disponibil.</p>
-            </div>
-            <Link
-              href={`/gestiune-scule?q=${encodeURIComponent(project.code)}`}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
-            >
-              Deschide gestiune scule
-            </Link>
-          </div>
-          <div className="mt-3 space-y-1">
-            {project.inventoryAssignments.length === 0 ? (
-              <ListItemSlim className="text-[var(--muted)]">
-                Nu exista scule active alocate pe acest proiect.
-              </ListItemSlim>
-            ) : null}
-            {project.inventoryAssignments.map((assignment) => (
-              <ListItemSlim key={assignment.id} className="flex-col items-start gap-1">
-                <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                  <p className="font-semibold text-[var(--foreground)]">
-                    {assignment.item.name} ({assignment.item.internalCode})
-                  </p>
-                  <Badge tone={assignment.item.status === InventoryItemStatus.AVAILABLE ? "success" : assignment.item.status === InventoryItemStatus.ASSIGNED ? "info" : "warning"}>
-                    {inventoryItemStatusLabels[assignment.item.status]}
-                  </Badge>
-                </div>
-                <p className="text-xs text-[var(--muted)]">
-                  Predat catre {assignment.issuedToUser.firstName} {assignment.issuedToUser.lastName} • Cantitate {Number(assignment.quantity).toFixed(2)} {assignment.item.unitOfMeasure}
-                </p>
-                <p className="text-xs text-[var(--muted)]">
-                  Disponibil in stoc: {Number(assignment.item.quantityAvailable).toFixed(2)} {assignment.item.unitOfMeasure}
-                </p>
-              </ListItemSlim>
-            ))}
-          </div>
-        </Card>
-
-        <PermissionGuard resource="PROJECTS" action="UPDATE">
-          <Card>
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--foreground)]">Instalatii tehnice</h2>
-                <p className="mt-1 text-sm text-[var(--muted)]">Echipamente instalate, certificari si urmatoare verificari.</p>
-              </div>
-            </div>
-          <div className="mt-3 space-y-1">
-            {project.installations.length === 0 ? (
-              <ListItemSlim className="text-[var(--muted)]">
-                Nu exista instalatii inregistrate pe acest proiect.
-              </ListItemSlim>
-            ) : null}
-            {project.installations.map((inst) => (
-              <div key={inst.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="truncate font-semibold text-[var(--foreground)]">{inst.name}</p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {inst.manufacturer} {inst.model || ""} {inst.serialNumber ? `| S/N ${inst.serialNumber}` : ""}
-                    </p>
-                  </div>
-                    <Badge tone={
-                      inst.status === InstallationStatus.CERTIFIED ? "success" :
-                      inst.status === InstallationStatus.INSTALLED ? "info" :
-                      inst.status === InstallationStatus.UNDER_TEST ? "warning" :
-                      inst.status === InstallationStatus.UNDER_MAINTENANCE ? "danger" : "neutral"
-                    }>
-                      {inst.status === InstallationStatus.UNDER_TEST ? "Testare" :
-                       inst.status === InstallationStatus.CERTIFIED ? "Certificat" :
-                       inst.status === InstallationStatus.UNDER_MAINTENANCE ? "In service" :
-                       inst.status === InstallationStatus.DECOMMISSIONED ? "Retras" : "Instalat"}
-                    </Badge>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--muted)]">
-                    {inst.warrantyMonths ? <span>Garantie {inst.warrantyMonths} luni</span> : null}
-                    {inst.installedAt ? <span>Instalat {formatDate(inst.installedAt)}</span> : null}
-                    {inst.nextCheckAt ? (
-                      <span className={new Date(inst.nextCheckAt) < new Date() ? "text-[var(--danger)] font-semibold" : ""}>
-                        Urm. verificare {formatDate(inst.nextCheckAt)}
-                        {new Date(inst.nextCheckAt) < new Date() ? " (DEPASIT)" : ""}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {Object.values(InstallationStatus).map((s) => (
-                      <form key={s} action={updateInstallationStatus} className="contents">
-                        <input type="hidden" name="id" value={inst.id} />
-                        <input type="hidden" name="projectId" value={project.id} />
-                        <input type="hidden" name="status" value={s} />
-                        <button
-                          type="submit"
-                          className={`rounded-md border px-2 py-0.5 text-[10px] transition-colors ${
-                            inst.status === s
-                              ? "border-[#4f9c76]/40 bg-[rgba(79,156,118,0.18)] text-[#bde7cf]"
-                              : "border-[var(--border)]/60 text-[var(--muted)] hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
-                          }`}
-                        >
-                          {s === "INSTALLED" ? "Instalat" : s === "UNDER_TEST" ? "Testare" : s === "CERTIFIED" ? "Certificat" : s === "UNDER_MAINTENANCE" ? "In service" : "Retras"}
-                        </button>
-                      </form>
-                    ))}
-                    <form action={archiveInstallation} className="contents">
-                      <input type="hidden" name="id" value={inst.id} />
-                      <input type="hidden" name="projectId" value={project.id} />
-                      <button
-                        type="submit"
-                        className="rounded-md border border-[var(--border)]/60 px-2 py-0.5 text-[10px] text-[var(--muted)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
-                      >
-                        Arhiveaza
-                      </button>
-                    </form>
-                  </div>
-                  {inst.notes ? <p className="mt-1.5 text-[11px] text-[var(--muted)]">{inst.notes}</p> : null}
-                </div>
-              ))}
-              <InstallationForm projectId={project.id} />
-            </div>
-          </Card>
-        </PermissionGuard>
-
-        <PermitTracker permits={project.permitApplications} projectId={project.id} />
-
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--foreground)]">Planuri proiect</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                Documentele deja incarcate sunt grupate automat pe discipline. Adauga tag-ul disciplinei (ex. <span className="font-semibold text-[var(--foreground)]">{planSections[0].sampleTag}</span>) pentru clasificare corecta.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="info">{planDocumentCount} planuri</Badge>
-              <Badge tone="neutral">{generalDocuments.length} alte documente</Badge>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 xl:grid-cols-2">
-            {planGroups.map((group) => (
-              <div key={group.key} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-card)] p-4 shadow-[var(--shadow-panel)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Plan</p>
-                    <h3 className="text-base font-semibold text-[var(--foreground)]">{group.label}</h3>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{group.description}</p>
-                  </div>
-                  <Badge tone={group.docs.length ? "success" : "neutral"}>{group.docs.length}</Badge>
-                </div>
-
-                {group.docs.length > 0 ? (
-                  <div className="mt-3 space-y-2">
-                    {group.docs.slice(0, 3).map((document) => (
-                      <div key={document.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 space-y-1">
-                            <p className="truncate text-sm font-semibold text-[var(--foreground)]">{document.title}</p>
-                            <p className="text-xs text-[var(--muted)]">
-                              {document.fileName} • {document.project?.title || document.workOrder?.title || "Document"}
-                            </p>
-                          </div>
-                          <Badge tone={document.isPrivate ? "neutral" : "success"}>{document.isPrivate ? "Privat" : "Public"}</Badge>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <a
-                            href={`/api/documents/${document.id}/download`}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--border-strong)]"
-                          >
-                            Deschide
-                          </a>
-                          <Link
-                            href={`/documente?projectId=${project.id}`}
-                            className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
-                          >
-                            Incarca alt plan
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                    {group.docs.length > 3 ? <p className="text-xs text-[var(--muted)]">+ {group.docs.length - 3} alte documente in aceasta categorie.</p> : null}
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface)] p-3 text-xs text-[var(--muted)]">
-                    Nu am gasit documente pentru aceasta disciplina. Adauga tag-ul <span className="font-semibold text-[var(--foreground)]">{group.sampleTag}</span> sau include disciplina in titlu.
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <section className="grid gap-4 xl:grid-cols-2">
-          <Card className="xl:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--foreground)]">Documente asociate</h2>
-                <p className="mt-1 text-sm text-[var(--muted)]">Contracte, rapoarte, imagini, avize si alte fisiere care nu se incadreaza in sectiunea de planuri.</p>
-              </div>
-              <Link
-                href={`/documente?projectId=${project.id}`}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
-              >
-                Deschide in Documente
-              </Link>
-            </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              {generalDocuments.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)] md:col-span-2">
-                  Nu exista alte documente asociate acestui proiect.
-                </p>
-              ) : null}
-              {generalDocuments.map((document) => (
-                <div key={document.id} className="rounded-2xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-4 text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <p className="truncate font-semibold text-[var(--foreground)]">{document.title}</p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {document.fileName} • {formatDate(document.createdAt)}
-                      </p>
-                    </div>
-                    <Badge tone={document.isPrivate ? "neutral" : "success"}>{document.isPrivate ? "Privat" : "Public"}</Badge>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge tone="info">{documentCategoryLabels[document.category]}</Badge>
-                    {document.expiresAt ? <Badge tone={document.expiresAt < new Date() ? "warning" : "neutral"}>{`Expira ${formatDate(document.expiresAt)}`}</Badge> : null}
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <a
-                      href={`/api/documents/${document.id}/download`}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--border-strong)]"
-                    >
-                      Deschide
-                    </a>
-                    {document.workOrder ? (
-                      <Link
-                        href={`/lucrari/${document.workOrder.id}`}
-                        className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
-                      >
-                        Lucrare
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Consum materiale</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              {project.materialUsage.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                  Nu exista consum de materiale inregistrat.
-                </p>
-              ) : null}
-              {project.materialUsage.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <p className="font-semibold text-[var(--foreground)]">{item.material.name}</p>
-                  <p className="text-xs text-[#a0b3ce]">
-                    Consum: {item.quantityUsed.toString()} {item.material.unitOfMeasure}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Facturi</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              {project.invoices.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                  Nu exista facturi asociate acestui proiect.
-                </p>
-              ) : null}
-              {project.invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <p className="font-semibold text-[var(--foreground)]">{invoice.invoiceNumber}</p>
-                  <p className="text-xs text-[#a0b3ce]">
-                    {formatCurrency(invoice.totalAmount.toString())} • Scadenta {formatDate(invoice.dueDate)} • {invoice.status}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Rapoarte zilnice</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              {project.dailyReports.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                  Nu exista rapoarte zilnice in acest moment.
-                </p>
-              ) : null}
-              {project.dailyReports.map((report) => (
-                <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <p className="font-semibold text-[var(--foreground)]">{formatDate(report.reportDate)}</p>
-                  <p className="text-xs text-[#a0b3ce]">{report.workCompleted}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Subcontractori</h2>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {project.subcontractors.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)] md:col-span-2">
-                  Nu exista subcontractori alocati pe acest proiect.
-                </p>
-              ) : null}
-              {project.subcontractors.map((assignment) => (
-                <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
-                  <p className="font-semibold text-[var(--foreground)]">{assignment.subcontractor.name}</p>
-                  <p className="text-xs text-[#a0b3ce]">Status {assignment.status} • Contract {assignment.contractRef || "-"}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
-
-        <Card>
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Timeline proiect (operational)</h2>
-          <p className="mt-1 text-xs text-[var(--muted)]">Un singur fir cronologic pentru update-uri, documente, costuri, materiale, lucrari si facturi.</p>
-          <div className="mt-3">
-            <ActivityTimeline events={timeline} />
-          </div>
-        </Card>
+        <ErrorBoundary fallback={<p className="text-sm text-[var(--danger)]">Eroare la incarcarea detaliilor proiectului.</p>}>
+          <Suspense fallback={<div className="shimmer h-96 rounded-2xl" />}>
+            <ProjectDetailContent id={id} />
+          </Suspense>
+        </ErrorBoundary>
       </div>
     </PermissionGuard>
   );

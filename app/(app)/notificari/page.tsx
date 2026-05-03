@@ -249,7 +249,7 @@ export default async function NotificariPage({
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => (
-              <Card key={notification.id} className={notification.isRead ? "opacity-85" : "border-[#4a6785] bg-[#15273b]"}>
+              <Card key={notification.id} className={notification.isRead ? "opacity-85" : "border-[var(--accent)] bg-[var(--surface-2)]"}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">

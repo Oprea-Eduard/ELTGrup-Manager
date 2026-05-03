@@ -1,69 +1,101 @@
 "use server";
 
-import { FgoInvoiceStatus } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { uploadInvoiceToFgo } from "@/src/lib/fgo";
-import { toFgoInvoiceStatus } from "@/src/lib/fgo-status";
 import { logActivity } from "@/src/lib/activity-log";
-import { revalidatePath } from "next/cache";
+import type { FgoInvoicePayload } from "@/src/lib/fgo.types";
+import { toFgoInvoiceStatus } from "@/src/lib/fgo-status";
 
-export async function sendInvoiceToFgo(formData: FormData) {
-  const user = await requirePermission("INVOICES", "UPDATE");
-  const invoiceId = formData.get("invoiceId") as string;
-  const projectId = formData.get("projectId") as string;
-  if (!invoiceId) return { ok: false, message: "ID factura lipsa" };
+const sendSchema = z.object({
+  invoiceId: z.string().min(1, "ID factura lipsa"),
+});
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: {
-      project: { select: { code: true, title: true, clientId: true } },
-      client: { select: { name: true, vatCode: true, registrationNumber: true } },
-    },
-  });
+export async function sendInvoiceToFgo(formData: FormData): Promise<void> {
+  try {
+    const user = await requirePermission("INVOICES", "UPDATE");
 
-  if (!invoice) return { ok: false, message: "Factura negasita" };
+    const parsed = sendSchema.safeParse({
+      invoiceId: formData.get("invoiceId"),
+    });
+    if (!parsed.success) {
+      throw new Error("ID factura invalid");
+    }
 
-  // Genereaza JSON factura (simplificat / dummy pentru demo)
-  const payload = JSON.stringify({
-    invoiceNumber: invoice.invoiceNumber,
-    issueDate: invoice.issueDate.toISOString(),
-    totalAmount: Number(invoice.totalAmount),
-    clientName: invoice.client.name,
-    clientVat: (invoice.client as any).vatNumber || invoice.client.vatCode,
-    projectCode: invoice.project.code,
-  });
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: parsed.data.invoiceId },
+      include: {
+        project: { select: { code: true, title: true, siteAddress: true } },
+        client: { select: { name: true, cui: true, vatCode: true, registrationNumber: true, billingAddress: true } },
+      },
+    });
 
-  const result = await uploadInvoiceToFgo(payload);
+    if (!invoice) throw new Error("Factura negasita");
 
-  if (result.ok && result.trackingId) {
+    if (invoice.fgoStatus === "SUBMITTED_OK" || invoice.fgoStatus === "SENT_TO_ANAF" || invoice.fgoStatus === "SIGNED") {
+      throw new Error("Factura a fost deja transmisa la ANAF");
+    }
+
+    const payload: FgoInvoicePayload = {
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.issueDate.toISOString().split("T")[0],
+      dueDate: invoice.dueDate.toISOString().split("T")[0],
+      baseAmount: Number(invoice.baseAmount),
+      vatRate: Number(invoice.vatRate),
+      vatAmount: Number(invoice.vatAmount),
+      totalAmount: Number(invoice.totalAmount),
+      currency: "RON",
+      client: {
+        name: invoice.client.name,
+        cui: invoice.client.cui || "",
+        registrationNumber: invoice.client.registrationNumber || "",
+        vatCode: invoice.client.vatCode || "",
+        address: invoice.client.billingAddress || "",
+      },
+      project: {
+        code: invoice.project.code,
+        title: invoice.project.title,
+      },
+      items: [
+        {
+          name: `Servicii proiect ${invoice.project.code}`,
+          quantity: 1,
+          unitPrice: Number(invoice.totalAmount),
+          totalPrice: Number(invoice.totalAmount),
+        },
+      ],
+    };
+
+    const result = await uploadInvoiceToFgo(payload);
+
     await prisma.invoice.update({
-      where: { id: invoiceId },
+      where: { id: parsed.data.invoiceId },
       data: {
-        fgoTrackingId: result.trackingId,
-        fgoStatus: result.status as FgoInvoiceStatus,
+        fgoTrackingId: result.ok ? result.trackingId : undefined,
+        fgoStatus: result.status,
+        fgoErrorCode: result.ok ? null : result.errors[0]?.code ?? null,
         fgoSentAt: new Date(),
+        fgoRespondedAt: new Date(),
       },
     });
-  } else {
-    await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        fgoStatus: toFgoInvoiceStatus(result.status as string),
-        fgoErrorCode: result.errors?.[0]?.code || "UNKNOWN",
+
+    await logActivity({
+      userId: user.id,
+      entityType: "INVOICE",
+      entityId: parsed.data.invoiceId,
+      action: result.ok ? "INVOICE_SENT_FGO" : "INVOICE_FGO_ERROR",
+      diff: {
+        trackingId: result.ok ? result.trackingId : undefined,
+        status: result.status,
+        errors: result.ok ? undefined : result.errors,
       },
     });
+
+    revalidatePath("/financiar");
+    if (invoice.projectId) revalidatePath(`/proiecte/${invoice.projectId}`);
+  } catch (error) {
+    console.error("FGO send error:", error);
   }
-
-  await logActivity({
-    userId: user.id,
-    entityType: "INVOICE",
-    entityId: invoiceId,
-    action: result.ok ? "INVOICE_SENT_FGO" : "INVOICE_FGO_ERROR",
-    diff: { trackingId: result.trackingId, status: result.status, errors: result.errors },
-  });
-
-  revalidatePath(projectId ? `/proiecte/${projectId}` : "/facturi");
-
-  return { ok: result.ok, trackingId: result.trackingId, status: result.status, errors: result.errors };
 }

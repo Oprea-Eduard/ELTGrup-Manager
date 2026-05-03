@@ -679,12 +679,12 @@ export default async function GestiuneSculePage({
               <InventoryReturnForm assignments={returnAssignmentOptions} />
               </div>
             </details>
-            <details className="rounded-2xl border border-[#f4b87a]/55 bg-[rgba(88,45,12,0.16)] p-4">
-              <summary className="cursor-pointer list-none text-sm font-semibold text-[#ffe7ca]">Corectie inventar</summary>
+            <details className="rounded-2xl border border-[var(--warning)]/55 bg-[var(--warning)]/10 p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--warning)]">Corectie inventar</summary>
               <div className="mt-4">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Corectie inventar</p>
               <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ajusteaza stoc cu motiv</h2>
-              <p className="mt-2 text-xs text-[#ffd8ad]">Foloseste corectia doar pentru inventar verificat; modifica stocul oficial.</p>
+              <p className="mt-2 text-xs text-[var(--warning)]">Foloseste corectia doar pentru inventar verificat; modifica stocul oficial.</p>
               <InventoryAdjustmentForm
                 items={rows.map((row) => ({ id: row.item.id, label: `${row.item.internalCode} • ${row.item.name}` }))}
               />

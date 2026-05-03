@@ -40,12 +40,16 @@ export function DailyReportCreateForm({
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {projects.length === 0 ? (
+        <p className="md:col-span-2 xl:col-span-4 text-sm text-[var(--muted)]">Nu exista proiecte disponibile. Pentru a adauga un raport, trebuie sa existe cel putin un proiect activ.</p>
+      ) : null}
       <select
         name="projectId"
         required
         value={selectedProjectId}
         onChange={(event) => setSelectedProjectId(event.target.value)}
         className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm"
+        disabled={projects.length === 0}
       >
         <option value="">Proiect</option>
         {projects.map((project) => (
@@ -72,7 +76,7 @@ export function DailyReportCreateForm({
       <Input name="weather" placeholder="Vreme" />
       <div>
         <Input name="workersCount" type="number" min={0} defaultValue={0} placeholder="Numar muncitori" />
-        {state.errors?.workersCount ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.workersCount[0]}</p> : null}
+        {state.errors?.workersCount ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.workersCount[0]}</p> : null}
       </div>
       <Input name="subcontractorsPresent" placeholder="Subcontractori prezenti" />
       <Input name="materialsReceived" placeholder="Materiale primite" />
@@ -85,7 +89,7 @@ export function DailyReportCreateForm({
       <div className="md:col-span-2 xl:col-span-4 flex justify-end">
         <Button type="submit" disabled={pending}>{pending ? "Se salveaza..." : "Salveaza raport"}</Button>
       </div>
-      {state.errors?.workCompleted ? <p className="md:col-span-2 xl:col-span-4 text-xs text-[#ffb4bd]">{state.errors.workCompleted[0]}</p> : null}
+      {state.errors?.workCompleted ? <p className="md:col-span-2 xl:col-span-4 text-xs text-[var(--danger)]">{state.errors.workCompleted[0]}</p> : null}
     </form>
   );
 }

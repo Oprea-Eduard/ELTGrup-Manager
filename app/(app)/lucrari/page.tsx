@@ -1,6 +1,5 @@
 import { Prisma, TaskPriority, WorkOrderStatus } from "@prisma/client";
 import Link from "next/link";
-import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
@@ -8,16 +7,17 @@ import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { TD, TH, Table } from "@/src/components/ui/table";
-import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { FormModal } from "@/src/components/forms/form-modal";
+import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
-import { bulkWorkOrdersAction, deleteWorkOrder, updateWorkOrderStatus } from "./actions";
 import { WorkOrderCreateForm } from "./work-order-create-form";
+import { WorkOrderRowActions } from "./work-order-row-actions";
+import { BulkActionsCard } from "./bulk-actions-card";
 
 function isPoolTimeout(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2024";
@@ -280,40 +280,11 @@ export default async function WorkOrdersPage({
         ) : null}
 
         {canUpdate || canDelete ? (
-          <Card className="bulk-zone">
-            <details>
-              <summary>Actiuni bulk lucrari</summary>
-              <form action={bulkWorkOrdersAction} className="mt-3 space-y-3">
-              <div className="bulk-controls grid gap-2 md:grid-cols-3">
-                <select
-                  name="operation"
-                  defaultValue={canUpdate ? "SET_STATUS" : "DELETE"}
-                >
-                  {canUpdate ? <option value="SET_STATUS">Actualizeaza status</option> : null}
-                  {canDelete ? <option value="DELETE">Sterge logic (CANCELED)</option> : null}
-                </select>
-                <select name="status" defaultValue={WorkOrderStatus.IN_PROGRESS} disabled={!canUpdate}>
-                  {workOrderStatusOptions.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-                <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pe lucrarile selectate?" />
-              </div>
-              <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                <div className="grid gap-1 md:grid-cols-2">
-                  {workOrders.map((item) => (
-                    <label key={item.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
-                      <input type="checkbox" name="ids" value={item.id} className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              </form>
-            </details>
-          </Card>
+          <BulkActionsCard
+            workOrders={workOrders.map((item) => ({ id: item.id, title: item.title }))}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+          />
         ) : null}
 
         <Card>
@@ -388,31 +359,12 @@ export default async function WorkOrdersPage({
                   </div>
                   {canUpdate || canDelete ? (
                     <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)]/30 pt-4">
-                      {canUpdate ? (
-                        <form action={updateWorkOrderStatus} className="flex flex-col gap-2">
-                          <input type="hidden" name="id" value={item.id} />
-                          <div className="grid grid-cols-[1fr_auto] gap-2">
-                            <select name="status" defaultValue={item.status} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--border-strong)] focus:outline-none">
-                              {workOrderStatusOptions.map((status) => (
-                                <option key={status.value} value={status.value}>
-                                  {status.label}
-                                </option>
-                              ))}
-                            </select>
-                            <Button variant="secondary" type="submit" className="h-11 px-4">
-                              Actualizeaza
-                            </Button>
-                          </div>
-                        </form>
-                      ) : null}
-                      {canDelete ? (
-                        <form action={deleteWorkOrder}>
-                          <input type="hidden" name="id" value={item.id} />
-                          <Button variant="destructive" type="submit" className="h-11 w-full">
-                            Sterge Lucrare
-                          </Button>
-                        </form>
-                      ) : null}
+                      <WorkOrderRowActions
+                        workOrderId={item.id}
+                        currentStatus={item.status}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                      />
                     </div>
                   ) : null}
                 </div>
@@ -461,35 +413,12 @@ export default async function WorkOrdersPage({
                         <Badge tone={getStatusTone(item.status)}>{formatWorkOrderStatus(item.status)}</Badge>
                       </TD>
                       <TD>
-                        {canUpdate || canDelete ? (
-                          <div className="flex gap-2">
-                            {canUpdate ? (
-                              <form action={updateWorkOrderStatus}>
-                                <input type="hidden" name="id" value={item.id} />
-                                <select name="status" defaultValue={item.status} className="h-9 rounded-md px-2 text-xs">
-                                  {workOrderStatusOptions.map((status) => (
-                                    <option key={status.value} value={status.value}>
-                                      {status.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <Button variant="ghost" size="sm" className="ml-1" type="submit">
-                                  Salveaza
-                                </Button>
-                              </form>
-                            ) : null}
-                            {canDelete ? (
-                              <form action={deleteWorkOrder}>
-                                <input type="hidden" name="id" value={item.id} />
-                                <Button variant="destructive" size="sm" type="submit">
-                                  Sterge
-                                </Button>
-                              </form>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-[var(--muted)]">Fara drept de editare</span>
-                        )}
+                        <WorkOrderRowActions
+                          workOrderId={item.id}
+                          currentStatus={item.status}
+                          canUpdate={canUpdate}
+                          canDelete={canDelete}
+                        />
                       </TD>
                     </tr>
                   ))}

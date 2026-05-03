@@ -117,7 +117,7 @@ export function UserAdminPanel({
               Selectia de rol inlocuieste accesul curent; este recomandat sa existe un singur rol activ per cont.
             </p>
             {newUserRole === RoleKey.SUPER_ADMIN ? (
-              <label className="md:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-lg border border-[#f4b87a] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[#ffd8ad]">
+              <label className="md:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[var(--warning)]">
                 <input
                   type="checkbox"
                   name="confirmSuperAdminAssignment"
@@ -168,7 +168,7 @@ export function UserAdminPanel({
                 <form action={updateUserRolesAction} className="mt-3 space-y-2">
                   <input type="hidden" name="userId" value={user.id} />
                   <div className="grid gap-2 md:grid-cols-2">
-                    <label className="text-xs text-[#cfddf1]">
+                    <label className="text-xs text-[var(--muted-strong)]">
                       <span className="mb-1 block uppercase tracking-[0.2em] text-[10px] text-[var(--muted)]">Rol activ</span>
                       <select
                         name="roleKey"
@@ -193,14 +193,14 @@ export function UserAdminPanel({
                       </select>
                     </label>
                     {(roleSelections[user.id] || resolveSingleRole(user)) === RoleKey.SUPER_ADMIN && canAssignSuperAdmin ? (
-                      <label className="flex items-center gap-2 rounded-lg border border-[#f4b87a] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[#ffd8ad]">
+                      <label className="flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[var(--warning)]">
                         <input type="checkbox" name="confirmSuperAdminAssignment" value="CONFIRM_SUPER_ADMIN" required />
                         Confirm explicit atribuirea rolului SUPER_ADMIN.
                       </label>
                     ) : null}
                   </div>
                   {user.roleKeys.length > 1 ? (
-                    <p className="text-xs text-[#ffd8ad]">
+                    <p className="text-xs text-[var(--warning)]">
                       Contul are mai multe roluri istorice. Salvarea va pastra doar rolul selectat.
                     </p>
                   ) : null}
@@ -242,19 +242,19 @@ export function UserAdminPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#f4b87a]/60 bg-[rgba(88,45,12,0.16)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-[#ffd8ad]">Curatare demo / onboarding</p>
-        <h2 className="mt-1 text-lg font-semibold text-[#ffe7ca]">Sterge datele boilerplate de seed</h2>
-        <p className="mt-2 text-sm text-[#ffd8ad]">
+      <section className="rounded-2xl border border-[var(--warning)]/60 bg-[rgba(88,45,12,0.16)] p-4">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--warning)]">Curatare demo / onboarding</p>
+        <h2 className="mt-1 text-lg font-semibold text-[var(--warning)]">Sterge datele boilerplate de seed</h2>
+        <p className="mt-2 text-sm text-[var(--warning)]">
           Actiunea curata doar inregistrarile demo identificate explicit in <code>prisma/seed.ts</code>, fara a atinge metadata RBAC
           (roluri/permisiuni) si fara a sterge contul administratorului conectat.
         </p>
         {canRunDemoCleanup ? (
-          <form action={cleanupFormAction} className="mt-3 space-y-3 rounded-xl border border-[#f4b87a]/50 bg-[rgba(44,19,2,0.35)] p-3">
+          <form action={cleanupFormAction} className="mt-3 space-y-3 rounded-xl border border-[var(--warning)]/50 bg-[rgba(44,19,2,0.35)] p-3">
             <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.16em] text-[#ffd8ad]">Confirmare obligatorie</p>
-              <p className="text-xs text-[#ffd8ad]/90">
-                Scrie exact <span className="font-semibold text-[#ffe7ca]">{DEMO_CLEANUP_CONFIRM_TEXT}</span> pentru a executa curatarea.
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--warning)]">Confirmare obligatorie</p>
+              <p className="text-xs text-[var(--warning)]/90">
+                Scrie exact <span className="font-semibold text-[var(--warning)]">{DEMO_CLEANUP_CONFIRM_TEXT}</span> pentru a executa curatarea.
               </p>
             </div>
             <Input
@@ -281,7 +281,7 @@ export function UserAdminPanel({
             </div>
           </form>
         ) : (
-          <p className="mt-3 text-sm text-[#ffd8ad]">
+          <p className="mt-3 text-sm text-[var(--warning)]">
             Doar rolurile SUPER_ADMIN si ADMINISTRATOR pot executa curatarea datelor demo.
           </p>
         )}

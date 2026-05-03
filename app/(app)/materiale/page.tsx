@@ -478,7 +478,7 @@ export default async function MaterialePage({
           <form className="mb-3 mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
             <input type="hidden" name="page" value="1" />
             <Input name="q" defaultValue={params.q || ""} placeholder="Cauta material" />
-            <select name="status" defaultValue={statusFilter || ""} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]">
+            <select name="status" defaultValue={statusFilter || ""} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]">
               <option value="">Toate starile istoricului</option>
               {requestHistoryStatuses.map((status) => (
                 <option key={status} value={status}>
@@ -489,7 +489,7 @@ export default async function MaterialePage({
             <select
               name="archived"
               defaultValue={archiveFilter}
-              className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]"
+              className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]"
             >
               <option value="active">Materiale active</option>
               <option value="archived">Doar arhivate</option>
@@ -521,7 +521,7 @@ export default async function MaterialePage({
                   <div className="max-h-40 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3">
                     <div className="grid gap-1 md:grid-cols-2">
                       {bulkArchivableMaterials.map((material) => (
-                        <label key={material.id} className="flex items-center gap-2 text-sm text-[#d9e8fb]">
+                        <label key={material.id} className="flex items-center gap-2 text-sm text-[var(--foreground)]">
                           <input type="checkbox" name="ids" value={material.id} className="h-4 w-4" />
                           <span>
                             {material.code} - {material.name}
@@ -540,7 +540,7 @@ export default async function MaterialePage({
           ) : (
             <div>
               {lowStockRows.length > 0 ? (
-                <div className="mb-3 rounded-lg border border-[rgba(184,142,67,0.4)] bg-[rgba(184,142,67,0.12)] p-3 text-sm text-[#eed8a8]">
+                <div className="mb-3 rounded-lg border border-[var(--warning)]/40 bg-[var(--warning)]/10 p-3 text-sm text-[var(--warning)]">
                   {lowStockRows.length} materiale sunt sub pragul minim pe pagina curenta. Verifica iesirile inainte sa aprobi noi consumuri.
                 </div>
               ) : null}
@@ -572,7 +572,7 @@ export default async function MaterialePage({
                         </div>
                         <Badge tone={statusTone}>{statusLabel}</Badge>
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#cfdff5]">
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--muted-strong)]">
                         <p>Stoc: {formatQuantity(material.stock)}</p>
                         <p>Prag: {formatQuantity(material.min)}</p>
                       </div>
@@ -751,7 +751,7 @@ export default async function MaterialePage({
             {canApproveRequests ? (
               <form action={bulkMaterialRequestsAction} className="mt-4 space-y-3">
                 <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-                  <select name="operation" defaultValue="APPROVE" className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]">
+                  <select name="operation" defaultValue="APPROVE" className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]">
                     <option value="APPROVE">Aproba selectie</option>
                     <option value="REJECT">Respinge selectie</option>
                   </select>

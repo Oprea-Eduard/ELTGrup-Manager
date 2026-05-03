@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/src/components/ui/button";
 
@@ -15,20 +16,40 @@ export function ConfirmSubmitButton({
   size?: "default" | "sm";
 }) {
   const { pending } = useFormStatus();
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          type="submit"
+          variant={variant === "destructive" ? "destructive" : "default"}
+          size={size}
+          disabled={pending}
+        >
+          {pending ? "Se proceseaza..." : "Confirm"}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size={size}
+          onClick={() => setConfirming(false)}
+        >
+          Anuleaza
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Button
-      type="submit"
+      type="button"
       variant={variant}
       size={size}
       disabled={pending}
-      onClick={(event) => {
-        if (!window.confirm(confirmMessage)) {
-          event.preventDefault();
-        }
-      }}
+      onClick={() => setConfirming(true)}
     >
-      {pending ? "Se proceseaza..." : text}
+      {text}
     </Button>
   );
 }
