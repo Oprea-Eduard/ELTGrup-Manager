@@ -103,10 +103,10 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
     roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE, RoleKey.ACCOUNTANT],
   },
   financial: {
-    resource: "INVOICES",
+    resource: "REPORTS",
     action: "VIEW",
     routePrefixes: ["/financiar"],
-    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.ACCOUNTANT],
+    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.ACCOUNTANT],
   },
   analytics: {
     resource: "REPORTS",

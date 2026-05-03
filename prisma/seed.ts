@@ -98,6 +98,41 @@ const sampleUsers = [
     roleKey: RoleKey.WORKER,
     positionTitle: "Tehnician electric",
   },
+  {
+    firstName: "Doru",
+    lastName: "Popa",
+    email: "seed.magazioner@eltgrup.local",
+    roleKey: RoleKey.MAGAZIONER,
+    positionTitle: "Magazioner",
+  },
+  {
+    firstName: "Irina",
+    lastName: "Dumitrescu",
+    email: "seed.backoffice@eltgrup.local",
+    roleKey: RoleKey.BACKOFFICE,
+    positionTitle: "Dispecer",
+  },
+  {
+    firstName: "Elena",
+    lastName: "Serban",
+    email: "seed.accountant@eltgrup.local",
+    roleKey: RoleKey.ACCOUNTANT,
+    positionTitle: "Contabil sef",
+  },
+  {
+    firstName: "Gheorghe",
+    lastName: "Munteanu",
+    email: "seed.subcontractor@eltgrup.local",
+    roleKey: RoleKey.SUBCONTRACTOR,
+    positionTitle: "Subcontractor",
+  },
+  {
+    firstName: "Maria",
+    lastName: "Popescu",
+    email: "seed.clientviewer@eltgrup.local",
+    roleKey: RoleKey.CLIENT_VIEWER,
+    positionTitle: "Reprezentant client",
+  },
 ] as const;
 
 const onboardingClientName = "ELTGRUP Onboarding Client SRL";
@@ -436,6 +471,7 @@ async function seedDemo(roles: RbacState["roles"], password: string) {
         where: { userId: user.id },
         update: {
           positionTitle: userSeed.positionTitle || "Tehnician electric",
+          employeeCode: "EMP-ONB-001",
           deletedAt: null,
         },
         create: {
@@ -446,6 +482,8 @@ async function seedDemo(roles: RbacState["roles"], password: string) {
           hireDate: subDays(new Date(), 120),
         },
       });
+    } else {
+      await prisma.workerProfile.deleteMany({ where: { userId: user.id } });
     }
 
     usersByKey.set(userSeed.roleKey, { id: user.id });
