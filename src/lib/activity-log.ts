@@ -21,10 +21,12 @@ export async function captureRequestContext(): Promise<RequestCapture> {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function redactRecursive(obj: any): any {
   if (!obj || typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj.map(redactRecursive);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const redacted: any = {};
   for (const [key, value] of Object.entries(obj)) {
     if (SENSITIVE_FIELDS.some(field => key.toLowerCase().includes(field.toLowerCase()))) {

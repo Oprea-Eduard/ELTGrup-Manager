@@ -92,12 +92,14 @@ export function WorkOrderCreateForm({
   projects,
   users,
   teams,
+  templates,
   responsibleWorkloadById,
   teamWorkloadById,
 }: {
   projects: Option[];
   users: Option[];
   teams: Option[];
+  templates?: Option[];
   responsibleWorkloadById?: WorkloadMap;
   teamWorkloadById?: WorkloadMap;
 }) {
@@ -191,6 +193,17 @@ export function WorkOrderCreateForm({
           options={statusOptions}
           error={state.errors?.status}
         />
+
+        {templates && templates.length > 0 && (
+          <div className="md:col-span-2">
+            <SelectField
+              label="Șablon Checklist (Opțional)"
+              help="Încarcă automat checklist-ul legal necesar pentru operațiunea curentă (ex. Verificare PSI)."
+              name="templateId"
+              options={templates.map((t) => ({ value: t.id, label: t.label, help: "" }))}
+            />
+          </div>
+        )}
 
         <div className="md:col-span-2 xl:col-span-4">
           <label>

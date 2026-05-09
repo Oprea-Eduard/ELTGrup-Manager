@@ -34,9 +34,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("theme") as Theme | null;
     const initial = stored || getSystemPreference();
-    setTheme(initial);
-    applyTheme(initial);
-    setHydrated(true);
+    setTimeout(() => {
+      setTheme(initial);
+      applyTheme(initial);
+      setHydrated(true);
+    }, 0);
   }, []);
 
   useEffect(() => {

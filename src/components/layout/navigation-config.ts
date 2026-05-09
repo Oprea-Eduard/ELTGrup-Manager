@@ -1,5 +1,5 @@
-import type { LucideIcon } from 'lucide-react';
-import type { AppModule } from '@/src/lib/access-control';
+import type { LucideIcon } from "lucide-react";
+import type { AppModule } from "@/src/lib/access-control";
 import {
   Bell,
   BriefcaseBusiness,
@@ -13,41 +13,50 @@ import {
   Receipt,
   ScrollTextIcon,
   Settings,
+  Smartphone,
   Timer,
   Truck,
   Users,
   Wrench,
-  Smartphone,
-} from 'lucide-react';
+} from "lucide-react";
 
 export type NavItem = {
   module: AppModule;
   href: string;
   label: string;
   icon: LucideIcon;
-  section: "Baza" | "Executie" | "Comercial" | "Sistem";
+  section: "Operare" | "Proiecte" | "Resurse" | "Financiar" | "Sistem";
   sub?: boolean;
 };
 
 export const navItems: NavItem[] = [
-  { module: "dashboard", href: "/panou", label: "Panou", icon: LayoutDashboard, section: "Baza" },
-  { module: "offers", href: "/oferte", label: "Oferte", icon: ScrollTextIcon, section: "Baza" },
-  { module: "projects", href: "/proiecte", label: "Proiecte", icon: BriefcaseBusiness, section: "Baza" },
-  { module: "work_orders", href: "/lucrari", label: "Lucrari", icon: ClipboardList, section: "Executie" },
-  { module: "time_tracking", href: "/pontaj", label: "Pontaj", icon: Timer, section: "Executie" },
-  { module: "teams", href: "/echipe", label: "Echipe", icon: Users, section: "Executie" },
-  { module: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, section: "Executie" },
-  { module: "materials", href: "/materiale", label: "Depozit", icon: Package, section: "Executie" },
-  { module: "materials", href: "/gestiune-scule", label: "Scule", icon: Wrench, section: "Executie", sub: true },
-  { module: "materials", href: "/materiale?tab=echipamente", label: "Echipamente", icon: Smartphone, section: "Executie", sub: true },
-  { module: "documents", href: "/documente", label: "Documente", icon: FileText, section: "Comercial" },
-  { module: "clients", href: "/clienti", label: "Clienti", icon: Users, section: "Comercial" },
-  { module: "reports", href: "/rapoarte-zilnice", label: "Rapoarte", icon: HardHat, section: "Comercial" },
-  { module: "subcontractors", href: "/subcontractori", label: "Subcontractori", icon: Truck, section: "Comercial" },
-  { module: "financial", href: "/financiar", label: "Financiar", icon: Receipt, section: "Comercial" },
+  // ─── Operare (daily work) ───
+  { module: "dashboard", href: "/panou", label: "Panou", icon: LayoutDashboard, section: "Operare" },
+  { module: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, section: "Operare" },
+  { module: "time_tracking", href: "/pontaj", label: "Pontaj", icon: Timer, section: "Operare" },
+  { module: "reports", href: "/rapoarte-zilnice", label: "Rapoarte", icon: HardHat, section: "Operare" },
+
+  // ─── Proiecte ───
+  { module: "projects", href: "/proiecte", label: "Proiecte", icon: BriefcaseBusiness, section: "Proiecte" },
+  { module: "work_orders", href: "/lucrari", label: "Lucrari", icon: ClipboardList, section: "Proiecte" },
+  { module: "offers", href: "/oferte", label: "Oferte", icon: ScrollTextIcon, section: "Proiecte" },
+
+  // ─── Resurse ───
+  { module: "teams", href: "/echipe", label: "Echipe", icon: Users, section: "Resurse" },
+  { module: "materials", href: "/materiale", label: "Depozit", icon: Package, section: "Resurse" },
+  { module: "materials", href: "/gestiune-scule", label: "Scule", icon: Wrench, section: "Resurse", sub: true },
+  { module: "materials", href: "/materiale?tab=echipamente", label: "Echipamente", icon: Smartphone, section: "Resurse", sub: true },
+  { module: "subcontractors", href: "/subcontractori", label: "Subcontractori", icon: Truck, section: "Resurse" },
+
+  // ─── Financiar ───
+  { module: "financial", href: "/financiar", label: "Financiar", icon: Receipt, section: "Financiar" },
+  { module: "clients", href: "/clienti", label: "Clienti", icon: Users, section: "Financiar" },
+  { module: "documents", href: "/documente", label: "Documente", icon: FileText, section: "Financiar" },
+
+  // ─── Sistem ───
   { module: "notifications", href: "/notificari", label: "Notificari", icon: Bell, section: "Sistem" },
   { module: "settings", href: "/setari", label: "Setari", icon: Settings, section: "Sistem" },
   { module: "settings", href: "/setari?tab=activitate", label: "Activitate", icon: History, section: "Sistem", sub: true },
 ];
 
-export const navSections: Array<NavItem["section"]> = ["Baza", "Executie", "Comercial", "Sistem"];
+export const navSections: Array<NavItem["section"]> = ["Operare", "Proiecte", "Resurse", "Financiar", "Sistem"];

@@ -159,7 +159,7 @@ export default async function ClientiPage({
 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader
           title="CRM Clienti"
           subtitle="Date companie, contacte, proiecte, note operationale si istoric"

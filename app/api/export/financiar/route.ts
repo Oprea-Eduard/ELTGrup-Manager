@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     const invoices = await prisma.invoice.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       where: where as any,
       include: { project: true, client: true },
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],

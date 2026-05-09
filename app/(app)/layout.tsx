@@ -38,10 +38,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen overflow-x-clip bg-[var(--background)] text-[color:var(--foreground)]">
       <GlobalCommandPalette />
       <KeyboardShortcuts />
-      <div className="mx-auto min-h-screen w-full max-w-[1980px] lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
+      <div className="mx-auto min-h-screen w-full max-w-[1440px] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
         <Sidebar visibleModules={visibleModules} />
-        <div className="relative min-h-screen min-w-0 lg:border-l lg:border-[var(--border)]/70">
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-48 bg-[linear-gradient(180deg,rgba(116,162,212,0.07),transparent)]" />
+        <div className="min-h-screen min-w-0">
           <Topbar
             visibleModules={visibleModules}
             user={{ id: session.user.id, name: session.user.name, roleKeys: session.user.roleKeys || [] }}

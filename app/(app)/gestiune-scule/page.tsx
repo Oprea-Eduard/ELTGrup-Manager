@@ -389,7 +389,7 @@ export default async function GestiuneSculePage({
 
   return (
     <PermissionGuard resource="MATERIALS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader
           title="Gestiune scule si depozit"
           subtitle="Catalog complet, predare/retur, corectii de stoc, istoric pe proiect si urmarirea verificarilor tehnice."

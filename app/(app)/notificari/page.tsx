@@ -160,7 +160,7 @@ export default async function NotificariPage({
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader
           title="Notificari"
           subtitle="Inbox operational: aprobari, alerte, schimbari de status si urmarire executie"

@@ -1,56 +1,62 @@
-import { Button as HeroButton } from "@heroui/react";
 import { Slot } from "@radix-ui/react-slot";
-import { cn } from "@/src/lib/utils";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/src/lib/utils";
 
-type BaseHeroButtonProps = Omit<React.ComponentProps<typeof HeroButton>, "variant" | "size" | "color" | "isLoading">;
-
-export interface ButtonProps extends BaseHeroButtonProps {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "secondary" | "ghost" | "destructive";
-  size?: "sm" | "default" | "lg";
-  disabled?: boolean;
+  size?: "sm" | "default" | "lg" | "icon";
   loading?: boolean;
   asChild?: boolean;
 }
 
-const sizeMap = { sm: "sm", default: "md", lg: "lg" } as const;
-
-const variantClassMap: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  default:
-    "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)] active:bg-[var(--accent-strong)] disabled:opacity-50",
-  secondary:
-    "border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-2)] disabled:opacity-50",
-  ghost:
-    "text-[var(--muted-strong)] hover:bg-[var(--surface)] hover:text-[var(--foreground)] disabled:opacity-50",
-  destructive:
-    "bg-[var(--danger)] text-white hover:opacity-90 disabled:opacity-50",
+const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
+  sm: "h-8 px-3 text-xs gap-1.5",
+  default: "h-10 px-4 text-sm gap-2 sm:h-11",
+  lg: "h-12 px-6 text-sm gap-2",
+  icon: "h-10 w-10 sm:h-11 sm:w-11 justify-center p-0",
 };
 
-export function Button({ className, variant = "default", size = "default", loading, disabled, asChild, children, ...props }: ButtonProps) {
-  const { ref: _ref, ...rest } = props as any;
+const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
+  default:
+    "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)] active:brightness-90",
+  secondary:
+    "border border-[var(--border)] bg-[var(--surface-1)] text-[var(--foreground)] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)]",
+  ghost:
+    "text-[var(--muted-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
+  destructive:
+    "bg-[var(--status-blocked)] text-white hover:opacity-90",
+};
 
-  const content = (
-    <>
-      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-      {children}
-    </>
-  );
-
-  const Comp = asChild ? Slot : HeroButton;
+export function Button({
+  className,
+  variant = "default",
+  size = "default",
+  loading,
+  disabled,
+  asChild,
+  children,
+  type = "button",
+  ...props
+}: ButtonProps) {
+  const Comp = asChild ? Slot : "button";
 
   return (
     <Comp
-      size={sizeMap[size]}
-      isDisabled={disabled || loading}
+      type={asChild ? undefined : type}
+      disabled={disabled || loading}
       className={cn(
-        "min-w-0 rounded-lg text-sm font-medium transition-all duration-100 active:scale-[0.98] data-[disabled=true]:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40",
+        "inline-flex items-center rounded-[var(--radius-md)] font-medium transition-all duration-100",
+        "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+        sizeStyles[size],
+        variantStyles[variant],
         loading && "pointer-events-none opacity-80",
-        variantClassMap[variant],
         className,
       )}
-      {...rest}
+      {...props}
     >
-      {asChild ? children : content}
+      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {children}
     </Comp>
   );
 }

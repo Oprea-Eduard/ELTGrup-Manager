@@ -205,7 +205,7 @@ export function TopbarGlobalSearch({
   }, [visibleSet]);
 
   useEffect(() => {
-    setSelectedIndex(0);
+    setTimeout(() => setSelectedIndex(0), 0);
   }, [query]);
 
   useEffect(() => {

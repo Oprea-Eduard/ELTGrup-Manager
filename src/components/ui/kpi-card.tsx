@@ -1,4 +1,5 @@
 import { memo } from "react";
+import Link from "next/link";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { cn } from "@/src/lib/utils";
 
@@ -7,6 +8,8 @@ export const KpiCard = memo(function KpiCard({
   value,
   helper,
   trend,
+  severity,
+  href,
   loading,
   onClick,
 }: {
@@ -14,34 +17,61 @@ export const KpiCard = memo(function KpiCard({
   value: string;
   helper?: string;
   trend?: "up" | "down";
+  severity?: "active" | "blocked" | "pending" | "done" | "info";
+  href?: string;
   loading?: boolean;
   onClick?: () => void;
 }) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-4",
-        onClick && "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-float)]",
-      )}
-      {...(onClick ? { onClick, role: "button", tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => e.key === "Enter" && onClick() } : {})}
-    >
-      <p className="text-[11px] font-medium text-[var(--muted)]">{label}</p>
+  const severityRail: Record<string, string> = {
+    active: "border-l-[var(--status-active)]",
+    blocked: "border-l-[var(--status-blocked)]",
+    pending: "border-l-[var(--status-pending)]",
+    done: "border-l-[var(--status-done)]",
+    info: "border-l-[var(--status-info)]",
+  };
+
+  const content = (
+    <>
+      <p className="text-[11px] font-medium tracking-wide text-[var(--muted)]">{label}</p>
       {loading ? (
-        <Skeleton className="mt-1.5 h-7 w-24" />
+        <Skeleton className="mt-2 h-7 w-20" />
       ) : (
-        <p className="mt-1.5 flex items-center gap-2 text-2xl font-semibold text-[var(--heading)] tabular-nums">
+        <p className="mt-2 flex items-baseline gap-2 text-2xl font-semibold text-[var(--heading)] tabular-nums leading-none">
           {value}
-          {trend === "up" && <span className="text-xs text-[var(--success)]">↑</span>}
-          {trend === "down" && <span className="text-xs text-[var(--danger)]">↓</span>}
+          {trend === "up" && <span className="text-xs font-medium text-[var(--status-active)]">↑</span>}
+          {trend === "down" && <span className="text-xs font-medium text-[var(--status-blocked)]">↓</span>}
         </p>
       )}
       {helper ? (
         loading ? (
-          <Skeleton className="mt-0.5 h-4 w-32" />
+          <Skeleton className="mt-1.5 h-3.5 w-28" />
         ) : (
-          <p className="mt-0.5 text-xs text-[var(--muted)]">{helper}</p>
+          <p className="mt-1.5 text-xs text-[var(--muted)]">{helper}</p>
         )
       ) : null}
+    </>
+  );
+
+  const classes = cn(
+    "rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-4",
+    severity && `border-l-[3px] ${severityRail[severity]}`,
+    (onClick || href) && "cursor-pointer transition-colors hover:bg-[var(--surface-2)]",
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={classes}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={classes}
+      {...(onClick ? { onClick, role: "button", tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => e.key === "Enter" && onClick() } : {})}
+    >
+      {content}
     </div>
   );
 });

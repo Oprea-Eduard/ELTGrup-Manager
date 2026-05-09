@@ -33,7 +33,7 @@ export default async function SetariPage() {
 
   return (
     <PermissionGuard resource="SETTINGS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader title="Setari / Administrare" subtitle="Identitate si control acces: conturi, roluri operationale, activare/dezactivare si audit de acces." />
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">

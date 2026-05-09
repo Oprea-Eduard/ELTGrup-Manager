@@ -83,10 +83,10 @@ function formatDeadline(dueDate: Date | null, status: WorkOrderStatus) {
   const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
   const diffDays = Math.round((dueStart.getTime() - startOfToday.getTime()) / 86400000);
 
-  if (diffDays < 0) return { label: `Restant de ${Math.abs(diffDays)} zile`, tone: "danger" as const };
-  if (diffDays === 0) return { label: "Scadenta azi", tone: "warning" as const };
-  if (diffDays === 1) return { label: "Scadenta maine", tone: "warning" as const };
-  return { label: `Scadenta in ${diffDays} zile`, tone: "neutral" as const };
+  if (diffDays < 0) return { label: `Restant ${Math.abs(diffDays)}z`, tone: "danger" as const };
+  if (diffDays === 0) return { label: "Azi", tone: "warning" as const };
+  if (diffDays === 1) return { label: "Maine", tone: "warning" as const };
+  return { label: `${diffDays}z`, tone: "neutral" as const };
 }
 
 function buildLucrariHref({
@@ -215,6 +215,15 @@ export default async function WorkOrdersPage({
       .filter((item) => item.teamId)
       .map((item) => [item.teamId as string, item._count._all]),
   );
+  const checklistTemplates = await withPoolFallback(
+    "checklistTemplate.findMany",
+    () =>
+      prisma.checklistTemplate.findMany({
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, category: true },
+      }),
+    [],
+  );
   const total = await withPoolFallback(
     "workOrder.count",
     () => prisma.workOrder.count({ where }),
@@ -249,21 +258,18 @@ export default async function WorkOrdersPage({
     [],
   );
 
+  const selectClass = "h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--foreground)] sm:h-11";
+
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
-      <div className="space-y-6">
-        <PageHeader title="Lucrari si ordine de lucru" subtitle="Coordonare executie santier, blocaje, termene si aprobari de operare" />
-
-        {canCreate ? (
-          <Card>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Creare</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Creare ordin de lucru</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Deschide formularul in dialog pentru a pastra contextul listei si al filtrului curent.
-            </p>
-            <div className="mt-3">
+      <div className="page-stack">
+        <PageHeader
+          title="Lucrari"
+          subtitle="Coordonare executie, termene si alocare echipe"
+          actions={
+            canCreate ? (
               <FormModal
-                triggerLabel="Adauga ordin de lucru"
+                triggerLabel="Adauga lucrare"
                 title="Creare ordin de lucru"
                 description="Completeaza detaliile de executie, responsabilul si echipa."
               >
@@ -271,106 +277,75 @@ export default async function WorkOrdersPage({
                   projects={projects.map((project) => ({ id: project.id, label: project.title }))}
                   users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
                   teams={teams.map((team) => ({ id: team.id, label: team.name }))}
+                  templates={checklistTemplates.map((t) => ({ id: t.id, label: `[${t.category}] ${t.name}` }))}
                   responsibleWorkloadById={responsibleWorkloadById}
                   teamWorkloadById={teamWorkloadById}
                 />
               </FormModal>
-            </div>
-          </Card>
-        ) : null}
+            ) : undefined
+          }
+        />
 
-        {canUpdate || canDelete ? (
+        {/* Inline filters */}
+        <form className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
+          <input type="hidden" name="page" value="1" />
+          <Input name="q" placeholder="Cauta lucrare..." defaultValue={q} />
+          <select name="status" defaultValue={statusFilter || ""} className={selectClass}>
+            <option value="">Toate statusurile</option>
+            {workOrderStatusOptions.map((status) => (
+              <option key={status.value} value={status.value}>{status.label}</option>
+            ))}
+          </select>
+          <select name="projectId" defaultValue={params.projectId || ""} className={selectClass}>
+            <option value="">Toate proiectele</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.title}</option>
+            ))}
+          </select>
+          <Button type="submit" variant="secondary">Filtreaza</Button>
+        </form>
+
+        {/* Bulk actions */}
+        {(canUpdate || canDelete) && (
           <BulkActionsCard
             workOrders={workOrders.map((item) => ({ id: item.id, title: item.title }))}
             canUpdate={canUpdate}
             canDelete={canDelete}
           />
-        ) : null}
+        )}
 
-        <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Filtre</p>
-          <form className="mb-4 mt-2 grid gap-3 md:grid-cols-4">
-            <input type="hidden" name="page" value="1" />
-            <Input name="q" placeholder="Cauta lucrare" defaultValue={q} />
-            <select name="status" defaultValue={statusFilter || ""}>
-              <option value="">Toate statusurile</option>
-              {workOrderStatusOptions.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-            <select name="projectId" defaultValue={params.projectId || ""}>
-              <option value="">Toate proiectele</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary">
-              Filtreaza
-            </Button>
-          </form>
-
-          {workOrders.length === 0 ? (
-            <EmptyState title="Nu exista lucrari" description="Adauga primul ordin de lucru pentru santier." />
-          ) : (
-            <div>
-            <div className="space-y-4 lg:hidden">
-              {workOrders.map((item) => (
-                <div key={item.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.5),rgba(15,25,37,0.5))] p-5 shadow-sm">
-                  <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border)]/50 pb-3">
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/lucrari/${item.id}`} className="block truncate text-lg font-bold text-[var(--foreground)] hover:text-[#9bc2ea]">
-                        {item.title}
-                      </Link>
-                      <p className="mt-0.5 truncate text-xs font-medium text-[#9fb9d7]">{item.project.title}</p>
-                    </div>
-                    <Badge tone={getStatusTone(item.status)} className="shrink-0">{formatWorkOrderStatus(item.status)}</Badge>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 rounded-xl bg-[rgba(13,20,30,0.4)] p-3 text-xs">
-                      <div className="space-y-1">
-                        <p className="font-bold uppercase tracking-wider text-[var(--muted)] text-[9px]">Prioritate</p>
-                        <Badge tone={getPriorityTone(item.priority)} className="w-full justify-center">{formatPriority(item.priority)}</Badge>
+        {/* Work order list */}
+        {workOrders.length === 0 ? (
+          <EmptyState title="Nu exista lucrari" description="Adauga primul ordin de lucru pentru santier." />
+        ) : (
+          <>
+            {/* Mobile cards */}
+            <div className="space-y-2 lg:hidden">
+              {workOrders.map((item) => {
+                const deadline = formatDeadline(item.dueDate, item.status);
+                return (
+                  <Link key={item.id} href={`/lucrari/${item.id}`} className="block">
+                    <Card className="active:bg-[var(--surface-2)]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[var(--foreground)]">{item.title}</p>
+                          <p className="mt-0.5 text-xs text-[var(--muted)]">{item.project.title}</p>
+                        </div>
+                        <Badge tone={getStatusTone(item.status)} className="shrink-0">{formatWorkOrderStatus(item.status)}</Badge>
                       </div>
-                      <div className="space-y-1">
-                        <p className="font-bold uppercase tracking-wider text-[var(--muted)] text-[9px]">Termen</p>
-                        <Badge tone={formatDeadline(item.dueDate, item.status).tone} className="w-full justify-center">{formatDeadline(item.dueDate, item.status).label}</Badge>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-[var(--muted)]">
+                        <Badge tone={getPriorityTone(item.priority)} className="text-[10px]">{formatPriority(item.priority)}</Badge>
+                        <span className={deadline.tone === "danger" ? "font-medium text-[var(--status-blocked)]" : ""}>{deadline.label}</span>
+                        <span className="ml-auto truncate">{item.team?.name || "—"}</span>
                       </div>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs">
-                      <p className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-[var(--muted)]">Responsabil:</span>
-                        <span className="truncate text-[var(--foreground)]">{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "nealocat"}</span>
-                      </p>
-                      <p className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-[var(--muted)]">Echipa:</span>
-                        <span className="truncate text-[var(--foreground)]">{item.team?.name || "fara echipa"}</span>
-                      </p>
-                      <p className="flex items-center justify-between gap-2 border-t border-[var(--border)]/30 pt-1.5">
-                        <span className="font-medium text-[var(--muted)]">Start:</span>
-                        <span className="text-[var(--foreground)]">{item.startDate ? formatDate(item.startDate) : "nedefinit"}</span>
-                      </p>
-                    </div>
-                  </div>
-                  {canUpdate || canDelete ? (
-                    <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)]/30 pt-4">
-                      <WorkOrderRowActions
-                        workOrderId={item.id}
-                        currentStatus={item.status}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] lg:block">
+
+            {/* Desktop table */}
+            <Card flush className="hidden lg:block">
               <Table>
                 <thead>
                   <tr>
@@ -378,90 +353,75 @@ export default async function WorkOrdersPage({
                     <TH>PROIECT</TH>
                     <TH>RESPONSABIL</TH>
                     <TH>ECHIPA</TH>
-                    <TH>PROGRAM</TH>
+                    <TH>TERMEN</TH>
                     <TH>PRIORITATE</TH>
                     <TH>STATUS</TH>
                     <TH>ACTIUNI</TH>
                   </tr>
                 </thead>
                 <tbody>
-                  {workOrders.map((item) => (
-                    <tr key={item.id}>
-                      <TD>
-                        <Link href={`/lucrari/${item.id}`} className="font-semibold text-[var(--muted-strong)] hover:underline">
-                          {item.title}
-                        </Link>
-                        <p className="text-xs text-[var(--muted)]">{item.description?.slice(0, 92) || "-"}</p>
-                      </TD>
-                      <TD>{item.project.title}</TD>
-                      <TD>
-                        <p>{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "Nealocat"}</p>
-                        <p className="text-xs text-[var(--muted)]">Persoana notificata la schimbari</p>
-                      </TD>
-                      <TD>
-                        <p>{item.team?.name || "Fara echipa"}</p>
-                        <p className="text-xs text-[var(--muted)]">Disponibilitate calculata pe lucrari active</p>
-                      </TD>
-                      <TD>
-                        <p>{item.startDate ? formatDate(item.startDate) : "Fara start"}</p>
-                        <p className="text-xs text-[var(--muted)]">{item.dueDate ? formatDate(item.dueDate) : "Fara termen"}</p>
-                      </TD>
-                      <TD>
-                        <Badge tone={getPriorityTone(item.priority)}>{formatPriority(item.priority)}</Badge>
-                      </TD>
-                      <TD>
-                        <Badge tone={getStatusTone(item.status)}>{formatWorkOrderStatus(item.status)}</Badge>
-                      </TD>
-                      <TD>
-                        <WorkOrderRowActions
-                          workOrderId={item.id}
-                          currentStatus={item.status}
-                          canUpdate={canUpdate}
-                          canDelete={canDelete}
-                        />
-                      </TD>
-                    </tr>
-                  ))}
+                  {workOrders.map((item) => {
+                    const deadline = formatDeadline(item.dueDate, item.status);
+                    return (
+                      <tr key={item.id}>
+                        <TD>
+                          <Link href={`/lucrari/${item.id}`} className="font-medium text-[var(--accent)] hover:underline">
+                            {item.title}
+                          </Link>
+                          {item.description && <p className="text-xs text-[var(--muted)]">{item.description.slice(0, 80)}</p>}
+                        </TD>
+                        <TD>{item.project.title}</TD>
+                        <TD>{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "Nealocat"}</TD>
+                        <TD>{item.team?.name || "—"}</TD>
+                        <TD>
+                          <span className={deadline.tone === "danger" ? "font-medium text-[var(--status-blocked)]" : "text-[var(--muted-strong)]"}>
+                            {deadline.label}
+                          </span>
+                        </TD>
+                        <TD><Badge tone={getPriorityTone(item.priority)}>{formatPriority(item.priority)}</Badge></TD>
+                        <TD><Badge tone={getStatusTone(item.status)}>{formatWorkOrderStatus(item.status)}</Badge></TD>
+                        <TD>
+                          <WorkOrderRowActions
+                            workOrderId={item.id}
+                            currentStatus={item.status}
+                            canUpdate={canUpdate}
+                            canDelete={canDelete}
+                          />
+                        </TD>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </Table>
-            </div>
-            </div>
-          )}
+            </Card>
+          </>
+        )}
 
-          <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)]/60 pt-6 text-sm text-[var(--muted)] sm:flex-row">
-            <span className="font-medium">
-              Pagina <span className="text-[var(--foreground)]">{currentPage}</span> din <span className="text-[var(--foreground)]">{totalPages}</span>
-            </span>
-            <div className="flex w-full gap-3 sm:w-auto">
-              {currentPage > 1 ? (
-                <Link
-                  href={buildLucrariHref({
-                    page: currentPage - 1,
-                    q: q || undefined,
-                    status: statusFilter,
-                    projectId: params.projectId,
-                  })}
-                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
-                >
-                  Anterior
-                </Link>
-              ) : null}
-              {currentPage < totalPages ? (
-                <Link
-                  href={buildLucrariHref({
-                    page: currentPage + 1,
-                    q: q || undefined,
-                    status: statusFilter,
-                    projectId: params.projectId,
-                  })}
-                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
-                >
-                  Urmator
-                </Link>
-              ) : null}
-            </div>
+        {/* Pagination */}
+        <div className="flex flex-col items-center justify-between gap-3 text-sm text-[var(--muted)] sm:flex-row">
+          <span>
+            Pagina <span className="font-medium text-[var(--foreground)]">{currentPage}</span> din <span className="font-medium text-[var(--foreground)]">{totalPages}</span>
+            {" · "}{total} lucrari
+          </span>
+          <div className="flex w-full gap-2 sm:w-auto">
+            {currentPage > 1 && (
+              <Link
+                href={buildLucrariHref({ page: currentPage - 1, q: q || undefined, status: statusFilter, projectId: params.projectId })}
+                className="flex h-9 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 text-sm font-medium text-[var(--muted-strong)] transition-colors hover:bg-[var(--surface-2)] sm:flex-none"
+              >
+                Anterior
+              </Link>
+            )}
+            {currentPage < totalPages && (
+              <Link
+                href={buildLucrariHref({ page: currentPage + 1, q: q || undefined, status: statusFilter, projectId: params.projectId })}
+                className="flex h-9 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 text-sm font-medium text-[var(--muted-strong)] transition-colors hover:bg-[var(--surface-2)] sm:flex-none"
+              >
+                Urmator
+              </Link>
+            )}
           </div>
-        </Card>
+        </div>
       </div>
     </PermissionGuard>
   );

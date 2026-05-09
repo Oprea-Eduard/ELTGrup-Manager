@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerBackdrop, DrawerDialog } from "@heroui/react";
 import { Menu, X } from "lucide-react";
 import type { AppModule } from "@/src/lib/access-control";
 import { Button } from "@/src/components/ui/button";
@@ -20,7 +19,9 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
 
   // Close drawer when navigating
   useEffect(() => {
-    handleClose();
+    setTimeout(() => {
+      handleClose();
+    }, 0);
   }, [pathname]);
 
   // Handle window resize
@@ -37,78 +38,82 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
   return (
     <>
       <Button
-        isIconOnly
+        size="icon"
         variant="secondary"
-        className="h-11 w-11 shrink-0 rounded-xl border-[var(--border)] bg-[var(--surface-card)] lg:hidden"
-        onPress={handleOpen}
+        className="shrink-0 lg:hidden"
+        onClick={handleOpen}
         aria-label="Deschide meniul"
       >
-        <Menu className="h-6 w-6 text-[var(--muted-strong)]" />
+        <Menu className="h-5 w-5" />
       </Button>
 
-      <Drawer isOpen={isOpen} onOpenChange={setIsOpen}>
-        <DrawerBackdrop className="bg-black/60 backdrop-blur-sm" />
-        <DrawerContent placement="left" className="h-full max-w-[320px] border-r border-[var(--border)] bg-[linear-gradient(180deg,#0d141e,#0a1119)] text-[var(--foreground)]">
-          <DrawerDialog className="flex h-full flex-col outline-none">
-            <DrawerHeader className="flex flex-col border-b border-[var(--border)] px-6 py-6">
-              <div className="flex items-center justify-between">
+      {/* Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={handleClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Drawer panel */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 flex h-full w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--shell)] transition-transform duration-200 ease-out lg:hidden",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">ELTGRUP Manager</p>
+            <p className="text-base font-semibold text-[var(--heading)]">Meniu</p>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleClose}
+            aria-label="Inchide meniul"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-4 py-5">
+          {navSections.map((section) => {
+            const sectionItems = navItems.filter((item) => item.section === section && visibleSet.has(item.module));
+            if (!sectionItems.length) return null;
+
+            return (
+              <section key={section} className="mb-6">
+                <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{section}</p>
                 <div className="flex flex-col gap-0.5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">ELTGRUP Manager</p>
-                  <p className="text-lg font-bold text-[var(--foreground)]">Meniu Principal</p>
+                  {sectionItems.map((item) => {
+                    const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={handleClose}
+                        className={cn(
+                          "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
+                          active
+                            ? "border-l-2 border-l-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--foreground)]"
+                            : "text-[var(--muted-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
+                        )}
+                      >
+                        <Icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-[var(--accent)]" : "")} />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
-                <Button
-                  isIconOnly
-                  variant="ghost"
-                  className="h-10 w-10 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface-card)]"
-                  onPress={handleClose}
-                  aria-label="Inchide meniul"
-                >
-                  <X className="h-5 w-5 text-[var(--muted-strong)]" />
-                </Button>
-              </div>
-            </DrawerHeader>
-
-            <DrawerBody className="flex-1 gap-8 overflow-y-auto px-6 py-8">
-              {navSections.map((section) => {
-                const sectionItems = navItems.filter((item) => item.section === section && visibleSet.has(item.module));
-                if (!sectionItems.length) return null;
-
-                return (
-                  <section key={section} className="flex flex-col gap-3">
-                    <p className="px-1 text-[11px] font-black uppercase tracking-[0.25em] text-[var(--muted)] opacity-60">{section}</p>
-                    <div className="flex flex-col gap-1.5">
-                      {sectionItems.map((item) => {
-                        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                        const Icon = item.icon;
-
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={handleClose}
-                            className={cn(
-                              "relative flex min-h-[52px] items-center gap-4 rounded-2xl border px-4 py-3 text-[15px] font-semibold transition-all active:scale-[0.97]",
-                              active
-                                ? "border-[var(--border-strong)] bg-[linear-gradient(135deg,rgba(40,64,90,0.6),rgba(20,32,46,0.6))] text-[var(--foreground)] shadow-lg shadow-black/20"
-                                : "border-transparent text-[var(--muted-strong)] hover:border-[var(--border)] hover:bg-[var(--surface-card)]",
-                            )}
-                          >
-                            {active ? (
-                              <div className="absolute left-0 top-1/2 h-8 w-1.5 -translate-y-1/2 rounded-r-full bg-[#8dc1f5] shadow-[2px_0_10px_rgba(141,193,245,0.4)]" />
-                            ) : null}
-                            <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#8dc1f5]" : "text-[var(--muted)]")} />
-                            <span className="flex-1 truncate">{item.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })}
-            </DrawerBody>
-          </DrawerDialog>
-        </DrawerContent>
-      </Drawer>
+              </section>
+            );
+          })}
+        </nav>
+      </aside>
     </>
   );
 }

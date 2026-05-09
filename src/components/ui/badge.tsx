@@ -1,25 +1,24 @@
-import { Chip } from "@heroui/react";
 import { cn } from "@/src/lib/utils";
 
 const filledStyles: Record<string, string> = {
-  success: "border border-[color-mix(in oklab,var(--success)_45%,transparent)] bg-[color-mix(in oklab,var(--success)_18%,transparent)] text-[color-mix(in oklab,var(--success)_75%,white_25%)]",
-  warning: "border border-[color-mix(in oklab,var(--warning)_45%,transparent)] bg-[color-mix(in oklab,var(--warning)_18%,transparent)] text-[color-mix(in oklab,var(--warning)_75%,white_25%)]",
-  danger: "border border-[color-mix(in oklab,var(--danger)_46%,transparent)] bg-[color-mix(in oklab,var(--danger)_18%,transparent)] text-[color-mix(in oklab,var(--danger)_75%,white_25%)]",
-  neutral: "border border-[color-mix(in oklab,var(--muted-strong)_44%,transparent)] bg-[color-mix(in oklab,var(--muted-strong)_17%,transparent)] text-[color-mix(in oklab,var(--foreground)_75%,white_25%)]",
-  info: "border border-[color-mix(in oklab,var(--info)_44%,transparent)] bg-[color-mix(in oklab,var(--info)_17%,transparent)] text-[color-mix(in oklab,var(--info)_75%,white_25%)]",
+  success: "border-[color-mix(in_oklab,var(--status-active)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-active)_15%,transparent)] text-[color-mix(in_oklab,var(--status-active)_80%,white_20%)]",
+  warning: "border-[color-mix(in_oklab,var(--status-pending)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-pending)_15%,transparent)] text-[color-mix(in_oklab,var(--status-pending)_80%,white_20%)]",
+  danger: "border-[color-mix(in_oklab,var(--status-blocked)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-blocked)_15%,transparent)] text-[color-mix(in_oklab,var(--status-blocked)_80%,white_20%)]",
+  neutral: "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted-strong)]",
+  info: "border-[color-mix(in_oklab,var(--status-info)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-info)_15%,transparent)] text-[color-mix(in_oklab,var(--status-info)_80%,white_20%)]",
 };
 
-const outlineStyles: Record<string, string> = {
-  success: "border border-[color-mix(in oklab,var(--success)_55%,transparent)] text-[color-mix(in oklab,var(--success)_80%,white_20%)]",
-  warning: "border border-[color-mix(in oklab,var(--warning)_55%,transparent)] text-[color-mix(in oklab,var(--warning)_80%,white_20%)]",
-  danger: "border border-[color-mix(in oklab,var(--danger)_56%,transparent)] text-[color-mix(in oklab,var(--danger)_80%,white_20%)]",
-  neutral: "border border-[color-mix(in oklab,var(--muted-strong)_55%,transparent)] text-[color-mix(in oklab,var(--foreground)_80%,white_20%)]",
-  info: "border border-[color-mix(in oklab,var(--info)_55%,transparent)] text-[color-mix(in oklab,var(--info)_80%,white_20%)]",
+const dotColors: Record<string, string> = {
+  success: "bg-[var(--status-active)]",
+  warning: "bg-[var(--status-pending)]",
+  danger: "bg-[var(--status-blocked)]",
+  neutral: "bg-[var(--muted)]",
+  info: "bg-[var(--status-info)]",
 };
 
 const sizeStyles = {
-  sm: "px-2 py-0.5 text-[9px]",
-  md: "px-2.5 py-1 text-[10px]",
+  sm: "px-1.5 py-0.5 text-[9px]",
+  md: "px-2 py-0.5 text-[10px]",
 };
 
 export function Badge({
@@ -27,29 +26,34 @@ export function Badge({
   tone = "neutral",
   className,
   size = "md",
-  outline,
+  dot,
 }: {
   children: React.ReactNode;
   tone?: keyof typeof filledStyles;
   className?: string;
   size?: "sm" | "md";
-  outline?: boolean;
+  /** Show as a dot + text instead of a pill */
+  dot?: boolean;
 }) {
-  const styles = outline ? outlineStyles : filledStyles;
+  if (dot) {
+    return (
+      <span className={cn("inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--muted-strong)]", className)}>
+        <span className={cn("inline-block h-1.5 w-1.5 rounded-full", dotColors[tone])} />
+        {children}
+      </span>
+    );
+  }
+
   return (
-    <Chip
-      variant="soft"
+    <span
       className={cn(
-        "inline-flex h-auto min-h-0 items-center rounded-full font-semibold uppercase tracking-[0.08em] leading-none",
+        "inline-flex items-center rounded-full border font-semibold uppercase tracking-[0.06em] leading-none",
         sizeStyles[size],
-        outline
-          ? "bg-transparent shadow-none"
-          : "shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_8%,transparent)]",
-        styles[tone],
+        filledStyles[tone],
         className,
       )}
     >
       {children}
-    </Chip>
+    </span>
   );
 }

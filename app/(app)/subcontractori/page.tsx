@@ -185,7 +185,7 @@ export default async function SubcontractoriPage({
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader
           title="Subcontractori"
           subtitle="Administrare subcontractori: conformitate, date comerciale, status aprobare si alocari active pe proiecte."

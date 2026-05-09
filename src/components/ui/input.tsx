@@ -2,12 +2,15 @@ import * as React from "react";
 import { cn } from "@/src/lib/utils";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => {
+  ({ className, type = "text", ...props }, ref) => {
     return (
       <input
         ref={ref}
+        type={type}
         className={cn(
-          "h-11 w-full rounded-lg border border-[var(--border)] bg-[color:color-mix(in_oklab,var(--surface-card)_85%,var(--shell)_15%)] px-3.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_4%,transparent)] transition-colors outline-none focus:-translate-y-px focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--accent)_24%,transparent)] disabled:cursor-not-allowed disabled:opacity-60",
+          "h-10 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]",
+          "transition-colors focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--ring)]",
+          "sm:h-11",
           className,
         )}
         {...props}

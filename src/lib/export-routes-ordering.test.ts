@@ -59,6 +59,7 @@ vi.mock("@/src/lib/rate-limit", () => ({
 }));
 
 function mockNextRequest(url: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { nextUrl: new URL(url), headers: new Headers() } as any;
 }
 

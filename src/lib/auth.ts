@@ -16,6 +16,7 @@ const loginSchema = z.object({
 });
 
 export const authOptions: NextAuthOptions = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(basePrisma as any),
   session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
   pages: {

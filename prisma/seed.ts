@@ -15,6 +15,7 @@ import {
   RoleKey,
   TaskPriority,
   WorkOrderStatus,
+  ChecklistCategory,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { addDays, subDays } from "date-fns";
@@ -834,6 +835,53 @@ async function seedDemo(roles: RbacState["roles"], password: string) {
   );
 }
 
+async function refreshTemplates() {
+  const templates = [
+    {
+      name: "Verificare trimestrială PSI",
+      category: ChecklistCategory.PSI,
+      items: [
+        "Verificare stare stingătoare",
+        "Testare hidranți interiori",
+        "Verificare iluminat de siguranță",
+        "Verificare detectoare fum",
+      ],
+    },
+    {
+      name: "Mentenanță preventivă tablou electric",
+      category: ChecklistCategory.ELECTRIC,
+      items: [
+        "Verificare strângere contacte",
+        "Măsurare rezistență izolație",
+        "Verificare termoviziune (puncte calde)",
+        "Curățare praf și reziduuri",
+      ],
+    },
+  ];
+
+  for (const t of templates) {
+    const existing = await prisma.checklistTemplate.findFirst({
+      where: { name: t.name },
+    });
+    if (!existing) {
+      await prisma.checklistTemplate.create({
+        data: {
+          name: t.name,
+          category: t.category,
+          items: t.items,
+        },
+      });
+    } else {
+      await prisma.checklistTemplate.update({
+        where: { id: existing.id },
+        data: {
+          items: t.items,
+        },
+      });
+    }
+  }
+}
+
 async function main() {
   if (seedMode === "demo") {
     assertDemoSeedAllowedForEnvironment();
@@ -857,6 +905,7 @@ async function main() {
     }
 
     const rbacState = await refreshRbac();
+    await refreshTemplates();
     await seedDemo(rbacState.roles, demoPassword);
     return;
   }
@@ -894,13 +943,15 @@ async function main() {
     };
 
     const rbacState = await refreshRbac();
+    await refreshTemplates();
     await seedBootstrap(rbacState.roles, bootstrapInput);
     return;
   }
 
   await refreshRbac();
+  await refreshTemplates();
   console.log(
-    "Seed safe mode completed: RBAC metadata refreshed only, demo data not touched.",
+    "Seed safe mode completed: RBAC metadata and templates refreshed, demo data not touched.",
   );
 }
 

@@ -85,3 +85,24 @@ export async function updateEquipmentStatus(formData: FormData) {
 
   revalidatePath("/echipamente");
 }
+
+export async function archiveEquipment(formData: FormData) {
+  const currentUser = await requirePermission("MATERIALS", "DELETE");
+  const id = String(formData.get("id"));
+  await assertEquipmentAccess(currentUser, id);
+
+  await prisma.equipment.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "EQUIPMENT",
+    entityId: id,
+    action: "EQUIPMENT_ARCHIVED",
+  });
+
+  revalidatePath("/materiale");
+}
+

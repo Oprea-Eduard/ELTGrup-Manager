@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     const reports = await prisma.dailySiteReport.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       where: where as any,
       include: { project: true, createdBy: true },
       orderBy: [{ reportDate: "desc" }, { id: "asc" }],

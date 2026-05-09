@@ -5,6 +5,7 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { KpiCard } from "@/src/components/ui/kpi-card";
 import { ListItemSlim } from "@/src/components/ui/list-item";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { FormModal } from "@/src/components/forms/form-modal";
@@ -188,68 +189,43 @@ export default async function FinanciarPage({
 
   return (
     <PermissionGuard resource="INVOICES" action="VIEW">
-      <div className="space-y-6">
-        <PageHeader title="Financiar operational" subtitle="Buget proiect, costuri reale, TVA, creante, status facturi, marja estimata" />
-        
-        <section className="grid gap-3 md:grid-cols-3">
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Total facturat</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">suma totala facturi emise</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Total costuri</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(totalCosts)}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">costuri operationale inregistrate</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Profit net</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(netProfit)}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">marja estimata ({totalInvoiced > 0 ? ((netProfit / totalInvoiced) * 100).toFixed(1) : "0.0"}%)</p>
-          </Card>
+      <div className="page-stack">
+        <PageHeader
+          title="Financiar"
+          subtitle="Facturi, costuri, marja si cashflow"
+          actions={
+            <div className="flex gap-2">
+              {canExportInvoices && (
+                <Link href="/api/export/financiar"><Button variant="secondary">Export CSV</Button></Link>
+              )}
+              {canCreateCost && (
+                <FormModal triggerLabel="Adauga cost" title="Cost operational nou" description="Asociaza costul unui proiect.">
+                  <CostEntryForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+                </FormModal>
+              )}
+            </div>
+          }
+        />
+
+        <section className="page-kpis">
+          <KpiCard label="Total facturat" value={formatCurrency(totalInvoiced)} helper="facturi emise" severity="info" />
+          <KpiCard label="Costuri" value={formatCurrency(totalCosts)} helper="operationale" severity={totalCosts > totalInvoiced ? "blocked" : "pending"} />
+          <KpiCard label="Profit net" value={formatCurrency(netProfit)} helper={`marja ${totalInvoiced > 0 ? ((netProfit / totalInvoiced) * 100).toFixed(1) : "0.0"}%`} severity={netProfit >= 0 ? "active" : "blocked"} />
+          <KpiCard label="Restante" value={formatCurrency(outstandingAmount)} helper="neincasat" severity={outstandingAmount > 0 ? "pending" : "done"} />
         </section>
 
-        {chartData.length > 0 && (
-          <ProfitabilityChart data={chartData} />
-        )}
+        {chartData.length > 0 && <ProfitabilityChart data={chartData} />}
 
-        {canExportInvoices ? (
-          <div className="flex justify-end">
-            <Link href="/api/export/financiar">
-              <Button variant="secondary">Export CSV Financiar</Button>
-            </Link>
-          </div>
-        ) : null}
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Total facturi filtrate</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{totalInvoices}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">in registrul curent</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Valoare restanta</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(outstandingAmount)}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">facturi emise/restante neincasate</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Incasat</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(paidAmount)}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">facturi marcate PAID</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Workflow activ</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {invoiceWorkflowOrder.map((status) => {
                 const count = statusSummaryMap.get(status)?._count._all || 0;
                 return (
                   <Link
                     key={status}
-                    href={buildFinanciarHref({
-                      page: 1,
-                      status,
-                      projectId: params.projectId,
-                    })}
-                    className="rounded-md border border-[var(--border)] px-2 py-1 text-[11px] font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
+                    href={buildFinanciarHref({ page: 1, status, projectId: params.projectId })}
+                    className="rounded-[var(--radius-sm)] border border-[var(--border)] px-2 py-1 text-[11px] font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)] transition-colors"
                   >
                     {invoiceStatusLabels[status]} ({count})
                   </Link>
@@ -290,65 +266,46 @@ export default async function FinanciarPage({
           ))}
         </section>
 
-        {canCreateCost ? (
-          <Card>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Costuri</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Adauga cost operational</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Introdu costurile din dialog pentru a mentine vizibilitatea asupra facturilor si marjelor.
-            </p>
-            <div className="mt-3">
-              <FormModal
-                triggerLabel="Adauga cost"
-                title="Cost operational nou"
-                description="Asociaza costul unui proiect si unei categorii."
-              >
-                <CostEntryForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
-              </FormModal>
-            </div>
-          </Card>
-        ) : null}
 
-        <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Facturi</p>
-          <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Facturi si incasari</h2>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            {"Flux recomandat: Draft -> Trimisa -> Partial achitata / Restanta -> Achitata."}
-          </p>
-          <form className="mt-3 grid gap-3 md:grid-cols-3">
-            <input type="hidden" name="page" value="1" />
-            <select name="status" defaultValue={statusFilter || ""}>
-              <option value="">Toate statusurile</option>
-              {Object.values(InvoiceStatus).map((status) => (
-                <option key={status} value={status}>{invoiceStatusLabels[status]}</option>
-              ))}
-            </select>
-            <select name="projectId" defaultValue={params.projectId || ""}>
-              <option value="">Toate proiectele</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>{project.title}</option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary">Filtreaza</Button>
-          </form>
-          {invoices.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--muted)]">Nu exista facturi pentru filtrele curente.</p>
-          ) : (
-            <div className="mt-3 space-y-1">
+
+        {/* Inline filters */}
+        <form className="grid gap-2 sm:grid-cols-[auto_auto_auto]">
+          <input type="hidden" name="page" value="1" />
+          <select name="status" defaultValue={statusFilter || ""} className="h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--foreground)] sm:h-11">
+            <option value="">Toate statusurile</option>
+            {Object.values(InvoiceStatus).map((status) => (
+              <option key={status} value={status}>{invoiceStatusLabels[status]}</option>
+            ))}
+          </select>
+          <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--foreground)] sm:h-11">
+            <option value="">Toate proiectele</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.title}</option>
+            ))}
+          </select>
+          <Button type="submit" variant="secondary">Filtreaza</Button>
+        </form>
+
+        {/* Invoice list */}
+        {invoices.length === 0 ? (
+          <Card><p className="text-sm text-[var(--muted)]">Nu exista facturi pentru filtrele curente.</p></Card>
+        ) : (
+          <Card>
+            <div className="space-y-1">
               {invoices.map((invoice) => (
-                  <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--foreground)]">
+                <div key={invoice.id} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-3 text-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <span className="font-medium">{invoice.invoiceNumber} • {invoice.project.title} • {invoice.client.name}</span>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
+                      <span className="font-medium text-[var(--foreground)]">{invoice.invoiceNumber} · {invoice.project.title} · {invoice.client.name}</span>
+                      <p className="mt-0.5 text-xs text-[var(--muted)]">
                         Scadenta {new Intl.DateTimeFormat("ro-RO").format(invoice.dueDate)}
-                        {invoice.issueDate ? ` • Emisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.issueDate)}` : ""}
-                        {invoice.paidAt ? ` • Incasata ${new Intl.DateTimeFormat("ro-RO").format(invoice.paidAt)}` : ""}
+                        {invoice.issueDate ? ` · Emisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.issueDate)}` : ""}
+                        {invoice.paidAt ? ` · Incasata ${new Intl.DateTimeFormat("ro-RO").format(invoice.paidAt)}` : ""}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <FgoStatusBadge status={invoice.fgoStatus} />
-                      <span className="font-semibold text-[var(--foreground)]">{formatCurrency(invoice.totalAmount.toString())}</span>
+                      <span className="font-semibold tabular-nums text-[var(--foreground)]">{formatCurrency(invoice.totalAmount.toString())}</span>
                       <Badge tone={invoice.status === "OVERDUE" ? "danger" : invoice.status === "PAID" ? "success" : "warning"}>
                         {invoiceStatusLabels[invoice.status]}
                       </Badge>
@@ -357,36 +314,32 @@ export default async function FinanciarPage({
                   {canUpdateInvoice || canDeleteFinancial ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       {canUpdateInvoice ? (
-                        <form action={updateInvoiceStatus} className="flex items-center gap-2">
+                        <form action={updateInvoiceStatus} className="flex items-center gap-1">
                           <input type="hidden" name="id" value={invoice.id} />
-                          <select name="status" defaultValue={invoice.status} className="h-9 rounded-md px-2 text-xs">
+                          <select name="status" defaultValue={invoice.status} className="h-8 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)] px-2 text-xs">
                             {Object.values(InvoiceStatus).map((status) => (
                               <option key={status} value={status}>{invoiceStatusLabels[status]}</option>
                             ))}
                           </select>
-                          <Button type="submit" size="sm" variant="secondary">Actualizeaza</Button>
+                          <Button type="submit" size="sm" variant="secondary">OK</Button>
                         </form>
                       ) : null}
                       {canUpdateInvoice && !invoice.fgoStatus ? (
                         <form action={sendInvoiceToFgo} className="inline">
                           <input type="hidden" name="invoiceId" value={invoice.id} />
-                          <Button size="sm" variant="secondary">Trimite FGO</Button>
+                          <Button size="sm" variant="secondary">FGO</Button>
                         </form>
                       ) : null}
                       {canUpdateInvoice && invoice.fgoStatus && invoice.fgoStatus !== "SUBMITTED_OK" && invoice.fgoStatus !== "SENT_TO_ANAF" && invoice.fgoStatus !== "SIGNED" ? (
                         <form action={sendInvoiceToFgo} className="inline">
                           <input type="hidden" name="invoiceId" value={invoice.id} />
-                          <Button size="sm" variant="secondary">Retrimite FGO</Button>
+                          <Button size="sm" variant="secondary">Retrimite</Button>
                         </form>
                       ) : null}
                       {canDeleteFinancial ? (
                         <form action={deleteInvoice}>
                           <input type="hidden" name="id" value={invoice.id} />
-                          <ConfirmSubmitButton
-                            text="Sterge"
-                            variant="destructive"
-                            confirmMessage={`Confirmi stergerea definitiva a facturii ${invoice.invoiceNumber}?`}
-                          />
+                          <ConfirmSubmitButton text="Sterge" variant="destructive" confirmMessage={`Confirmi stergerea facturii ${invoice.invoiceNumber}?`} />
                         </form>
                       ) : null}
                     </div>
@@ -394,15 +347,19 @@ export default async function FinanciarPage({
                 </div>
               ))}
             </div>
-          )}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--muted)]">
-            <span>Pagina {currentPage} din {totalPages}</span>
-            <div className="flex gap-2">
-              {currentPage > 1 ? <Link href={buildFinanciarHref({ page: currentPage - 1, status: statusFilter, projectId: params.projectId })} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Anterior</Link> : null}
-              {currentPage < totalPages ? <Link href={buildFinanciarHref({ page: currentPage + 1, status: statusFilter, projectId: params.projectId })} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Urmator</Link> : null}
-            </div>
+          </Card>
+        )}
+
+        {/* Pagination */}
+        <div className="flex flex-col items-center justify-between gap-3 text-sm text-[var(--muted)] sm:flex-row">
+          <span>
+            Pagina <span className="font-medium text-[var(--foreground)]">{currentPage}</span> din <span className="font-medium text-[var(--foreground)]">{totalPages}</span>
+          </span>
+          <div className="flex gap-2">
+            {currentPage > 1 && <Link href={buildFinanciarHref({ page: currentPage - 1, status: statusFilter, projectId: params.projectId })} className="flex h-9 items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 text-sm font-medium text-[var(--muted-strong)] hover:bg-[var(--surface-2)]">Anterior</Link>}
+            {currentPage < totalPages && <Link href={buildFinanciarHref({ page: currentPage + 1, status: statusFilter, projectId: params.projectId })} className="flex h-9 items-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 text-sm font-medium text-[var(--muted-strong)] hover:bg-[var(--surface-2)]">Urmator</Link>}
           </div>
-        </Card>
+        </div>
 
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-2">

@@ -5,13 +5,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function Table({ className, children }: { className?: string; children: ReactNode }) {
+export function Table({ className, children, compact, ...rest }: { className?: string; children: ReactNode; compact?: boolean } & React.HTMLAttributes<HTMLTableElement>) {
   return (
     <table
       className={cn(
-        "w-full border-collapse text-sm [&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border)]/50 [&_tbody_tr:hover]:bg-[var(--surface)]",
+        "w-full border-collapse text-sm",
+        "[&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border)]/50",
+        "[&_tbody_tr:hover]:bg-[var(--surface-2)]",
+        compact && "[&_td]:py-1.5 [&_th]:py-1.5",
         className,
       )}
+      {...rest}
     >
       {children}
     </table>
@@ -22,7 +26,7 @@ export function TH({ children, className }: { children: ReactNode; className?: s
   return (
     <th
       className={cn(
-        "sticky top-0 z-[1] bg-[var(--surface-card)] px-3 py-2.5 text-left text-[11px] font-semibold text-[var(--muted)] border-b border-[var(--border)] lg:px-4",
+        "sticky top-0 z-[2] bg-[var(--surface-1)] px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-strong)] border-b border-[var(--border)] lg:px-4",
         className,
       )}
     >

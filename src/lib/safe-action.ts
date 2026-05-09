@@ -5,7 +5,7 @@ import { ActionState, fromZodError } from "./action-state";
 import { logActivity } from "./activity-log";
 import { checkRateLimit } from "./rate-limit";
 
-type SafeActionOptions<T extends z.ZodType> = {
+type SafeActionOptions<T extends z.ZodType, R = unknown> = {
   schema?: T;
   permission?: {
     resource: PermissionResource;
@@ -14,15 +14,15 @@ type SafeActionOptions<T extends z.ZodType> = {
   activityLog?: {
     entityType: string;
     action: string;
-    getEntityId: (result: any) => string;
-    getDiff?: (data: z.infer<T>, result: any) => any;
+    getEntityId: (result: R) => string;
+    getDiff?: (data: z.infer<T>, result: R) => Record<string, unknown> | undefined;
     redactFields?: string[];
   };
 };
 
-function redactSensitiveData(data: any, fieldsToRedact: string[]) {
+function redactSensitiveData(data: unknown, fieldsToRedact: string[]) {
   if (!data || typeof data !== "object") return data;
-  const redacted = { ...data };
+  const redacted = { ...(data as Record<string, unknown>) };
   for (const field of fieldsToRedact) {
     if (field in redacted) {
       redacted[field] = "[REDACTED]";
@@ -32,10 +32,10 @@ function redactSensitiveData(data: any, fieldsToRedact: string[]) {
 }
 
 export function createSafeAction<T extends z.ZodType, R>(
-  options: SafeActionOptions<T>,
-  handler: (data: z.infer<T>, user: any) => Promise<R>
+  options: SafeActionOptions<T, R>,
+  handler: (data: z.infer<T>, user: unknown) => Promise<R>
 ) {
-  return async (arg1: any, arg2?: any): Promise<ActionState> => {
+  return async (arg1: unknown, arg2?: unknown): Promise<ActionState> => {
     // Determine if it's (state, formData) or just (formData)
     const isStateful = arg2 !== undefined;
     const formData = isStateful ? (arg2 as FormData) : (arg1 as FormData);
@@ -52,9 +52,9 @@ export function createSafeAction<T extends z.ZodType, R>(
       }
 
       // 2. Data Validation
-      let parsedData: z.infer<T> = {} as any;
+      let parsedData: z.infer<T> = {} as z.infer<T>;
       if (options.schema) {
-        const rawData: Record<string, any> = {};
+        const rawData: Record<string, unknown> = {};
         for (const key of Array.from(formData.keys())) {
           const values = formData.getAll(key);
           if (values.length > 1) {
@@ -76,10 +76,10 @@ export function createSafeAction<T extends z.ZodType, R>(
 
       // 4. Activity Logging
       if (options.activityLog && user) {
-        let diff = options.activityLog.getDiff ? options.activityLog.getDiff(parsedData, result) : undefined;
+        let diff: Record<string, unknown> | undefined = options.activityLog.getDiff ? options.activityLog.getDiff(parsedData, result) as Record<string, unknown> | undefined : undefined;
         
         if (diff && options.activityLog.redactFields) {
-          diff = redactSensitiveData(diff, options.activityLog.redactFields);
+          diff = redactSensitiveData(diff, options.activityLog.redactFields) as Record<string, unknown>;
         }
 
         await logActivity({
@@ -87,12 +87,12 @@ export function createSafeAction<T extends z.ZodType, R>(
           entityType: options.activityLog.entityType,
           entityId: options.activityLog.getEntityId(result),
           action: options.activityLog.action,
-          diff,
+          diff: diff as import("@prisma/client").Prisma.JsonValue | undefined,
         });
       }
 
       return { ok: true, message: "Acțiune finalizată cu succes." };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("SafeAction Error:", error);
       return {
         ok: false,

@@ -160,7 +160,7 @@ export default async function EchipePage({
 
   return (
     <PermissionGuard resource="TEAMS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader
           title="Echipe"
           subtitle="Creeaza echipe operationale, seteaza responsabilul si controleaza ce grupuri pot fi alocate pe lucrari."

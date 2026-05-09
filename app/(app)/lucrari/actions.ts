@@ -30,6 +30,7 @@ const createWorkOrderSchema = z.object({
   priority: z.nativeEnum(TaskPriority),
   status: z.nativeEnum(WorkOrderStatus),
   description: z.string().optional(),
+  templateId: z.string().optional(),
 }).superRefine((data, ctx) => {
   const isValidDate = (value?: string) => !value || !Number.isNaN(new Date(value).getTime());
 
@@ -75,7 +76,23 @@ export const createWorkOrderAction = createSafeAction(
     permission: { resource: "TASKS", action: "CREATE" },
   },
   async (data, currentUser) => {
-    await assertProjectAccess(currentUser, data.projectId);
+    await assertProjectAccess(currentUser as any, data.projectId);
+
+    let checklistItemsInput = undefined;
+
+    if (data.templateId) {
+      const template = await prisma.checklistTemplate.findUnique({
+        where: { id: data.templateId },
+      });
+      if (template && template.items.length > 0) {
+        checklistItemsInput = {
+          create: template.items.map((label) => ({
+            label,
+            category: template.category,
+          })),
+        };
+      }
+    }
 
     const created = await prisma.workOrder.create({
       data: {
@@ -89,6 +106,7 @@ export const createWorkOrderAction = createSafeAction(
         priority: data.priority,
         status: data.status,
         description: data.description,
+        checklistItems: checklistItemsInput,
       },
       select: {
         id: true,
@@ -101,7 +119,7 @@ export const createWorkOrderAction = createSafeAction(
     });
 
     await logActivity({
-      userId: currentUser.id,
+      userId: (currentUser as any).id,
       entityType: "WORK_ORDER",
       entityId: created.id,
       action: "WORK_ORDER_CREATED",

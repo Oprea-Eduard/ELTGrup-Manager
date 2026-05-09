@@ -119,7 +119,7 @@ export default async function RapoarteZilnicePage({
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader title="Rapoarte zilnice de santier" subtitle="Vreme, prezenta, progres lucrari, blocaje, SSM, poze si semnaturi" />
         <Card>
           <form className="grid gap-3 md:grid-cols-3">

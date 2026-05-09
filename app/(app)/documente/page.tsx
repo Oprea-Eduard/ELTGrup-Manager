@@ -269,7 +269,7 @@ export default async function DocumentePage({
 
   return (
     <PermissionGuard resource="DOCUMENTS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader title="Documente" subtitle="Contracte, anexe, facturi, rapoarte, conformitate, permise" />
 
         {canCreate ? (

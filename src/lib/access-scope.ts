@@ -19,6 +19,7 @@ export const resolveAccessScope = cache(async (user: AuthUserLike): Promise<Acce
   });
 
   const email = (user.email || "").toLowerCase();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const promises: Promise<any>[] = [teamProfilePromise];
 
   // 1. Managed projects (PM/SM)

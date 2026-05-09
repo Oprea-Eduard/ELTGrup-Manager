@@ -109,7 +109,7 @@ export const createProjectAction = createSafeAction(
   async (data, currentUser) => {
     const created = await ProjectService.create({
       ...data,
-      managerId: currentUser.id,
+      managerId: (currentUser as any).id,
       startDate: data.startDate ? new Date(data.startDate) : null,
       endDate: data.endDate ? new Date(data.endDate) : null,
     });
@@ -125,8 +125,8 @@ const updateProjectStatusActionInternal = createSafeAction(
     permission: { resource: "PROJECTS", action: "UPDATE" },
   },
   async (data, currentUser) => {
-    await assertProjectAccess(currentUser, data.id);
-    const updated = await ProjectService.updateStatus(data.id, data.status, currentUser.id);
+    await assertProjectAccess(currentUser as any, data.id);
+    const updated = await ProjectService.updateStatus(data.id, data.status, (currentUser as any).id);
     revalidateProjectRelatedPaths(data.id);
     return updated;
   }

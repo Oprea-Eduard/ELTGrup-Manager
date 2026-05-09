@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     if (projectId) where.projectId = projectId;
 
     const rows = await prisma.timeEntry.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       where: where as any,
       include: { user: true, project: true, workOrder: true },
       orderBy: [{ startAt: "asc" }, { id: "asc" }],

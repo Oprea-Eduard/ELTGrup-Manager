@@ -103,7 +103,7 @@ export default async function CalendarPage({
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
-      <div className="space-y-6">
+      <div className="page-stack">
         <PageHeader title="Calendar operational" subtitle="Planificare saptamanala cu detectie conflicte si reprogramare directa" />
         <Card className="space-y-4">
           <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

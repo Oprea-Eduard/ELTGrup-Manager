@@ -1,5 +1,6 @@
 import { ProjectStatus } from "@prisma/client";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -39,10 +40,8 @@ const projectStatusOptions = Object.values(ProjectStatus).map((status) => ({
 }));
 
 function formatProjectDates(startDate: Date | null, endDate: Date | null) {
-  if (!startDate && !endDate) return "Fara interval definit";
-  if (startDate && endDate) {
-    return `Start: ${formatDate(startDate)} / Termen: ${formatDate(endDate)}`;
-  }
+  if (!startDate && !endDate) return "Fara interval";
+  if (startDate && endDate) return `${formatDate(startDate)} → ${formatDate(endDate)}`;
   if (startDate) return `Start: ${formatDate(startDate)}`;
   return `Termen: ${formatDate(endDate as Date)}`;
 }
@@ -69,7 +68,7 @@ function buildProiecteHref({
 function PaginationLink({ href, label, disabled }: { href: string | null; label: string; disabled?: boolean }) {
   if (disabled || !href) {
     return (
-      <span className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted)] opacity-40 sm:flex-none">
+      <span className="flex h-9 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 text-sm font-medium text-[var(--muted)] opacity-40 sm:flex-none">
         {label}
       </span>
     );
@@ -77,9 +76,7 @@ function PaginationLink({ href, label, disabled }: { href: string | null; label:
   return (
     <Link
       href={href}
-      className={cn(
-        "flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none",
-      )}
+      className="flex h-9 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-4 text-sm font-medium text-[var(--muted-strong)] transition-colors hover:bg-[var(--surface-2)] active:scale-[0.98] sm:flex-none"
     >
       {label}
     </Link>
@@ -159,17 +156,13 @@ export default async function ProjectsPage({
 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
-      <div className="space-y-6">
-        <PageHeader title="Proiecte" subtitle="Portofoliu executie, costuri, status contractual si risc operational" />
-
-        {canCreate ? (
-          <Card>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Creare</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Proiect nou</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Foloseste dialogul pentru creare ca sa pastrezi lista curenta vizibila in timpul completarii.
-            </p>
-            <div className="mt-3">
+      <div className="page-stack">
+        {/* Header with action button */}
+        <PageHeader
+          title="Proiecte"
+          subtitle="Portofoliu executie, costuri, status contractual"
+          actions={
+            canCreate ? (
               <FormModal
                 triggerLabel="Adauga proiect"
                 title="Creare proiect nou"
@@ -177,158 +170,104 @@ export default async function ProjectsPage({
               >
                 <ProjectCreateForm clients={clients} />
               </FormModal>
-            </div>
-          </Card>
-        ) : null}
+            ) : undefined
+          }
+        />
 
-        {canUpdate || canDelete ? (
-          <Card className="bulk-zone">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Actiuni in masa</p>
-              <Link href={bulkHref} className="text-xs font-semibold text-[var(--accent)] hover:underline">
-                {bulkOpen ? "Ascunde" : "Deschide"}
-              </Link>
-            </div>
-            {bulkOpen ? (
-              <form action={bulkProjectsAction} className="mt-3 space-y-3">
-                <div className="bulk-controls grid gap-2 md:grid-cols-3">
-                  <select
-                    name="operation"
-                    defaultValue={canUpdate ? "SET_STATUS" : "ARCHIVE"}
-                    className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
-                  >
-                    {canUpdate ? <option value="SET_STATUS">Actualizeaza status</option> : null}
-                    {canDelete ? <option value="ARCHIVE">Arhiveaza (soft delete)</option> : null}
-                  </select>
-                  <select name="status" defaultValue={ProjectStatus.ACTIVE} disabled={!canUpdate} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)] disabled:opacity-50">
-                    {projectStatusOptions.map((status) => (
-                      <option key={status.value} value={status.value}>
-                        {status.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi executia actiunii bulk pe proiectele selectate?" />
+        {/* Inline filters */}
+        <form className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <Input name="q" placeholder="Cauta dupa nume proiect..." defaultValue={query} />
+          <input type="hidden" name="page" value="1" />
+          <select name="status" defaultValue={statusFilter || ""} className="h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--foreground)] sm:h-11">
+            <option value="">Toate statusurile</option>
+            {projectStatusOptions.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="secondary">Aplica</Button>
+        </form>
+
+        {/* Bulk actions — collapsible */}
+        {(canUpdate || canDelete) && (
+          <div className="flex items-center gap-3 text-sm">
+            <Link href={bulkHref} className="text-xs font-medium text-[var(--accent)] hover:underline">
+              {bulkOpen ? "Ascunde actiuni bulk" : "Actiuni in masa"}
+            </Link>
+            <span className="text-[var(--muted)]">·</span>
+            <span className="text-xs text-[var(--muted)]">{total} proiecte</span>
+          </div>
+        )}
+
+        {bulkOpen && (canUpdate || canDelete) && (
+          <Card>
+            <form action={bulkProjectsAction} className="space-y-3">
+              <div className="grid gap-2 md:grid-cols-3">
+                <select
+                  name="operation"
+                  defaultValue={canUpdate ? "SET_STATUS" : "ARCHIVE"}
+                  className="h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm sm:h-11"
+                >
+                  {canUpdate ? <option value="SET_STATUS">Actualizeaza status</option> : null}
+                  {canDelete ? <option value="ARCHIVE">Arhiveaza (soft delete)</option> : null}
+                </select>
+                <select name="status" defaultValue={ProjectStatus.ACTIVE} disabled={!canUpdate} className="h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm disabled:opacity-50 sm:h-11">
+                  {projectStatusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
+                </select>
+                <ConfirmSubmitButton text="Executa" confirmMessage="Confirmi executia actiunii bulk pe proiectele selectate?" />
+              </div>
+              <div className="max-h-36 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                <div className="grid gap-1 md:grid-cols-2">
+                  {projects.map((project) => (
+                    <label key={project.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
+                      <input type="checkbox" name="ids" value={project.id} className="h-4 w-4 accent-[var(--accent)]" />
+                      <span>{project.code} — {project.title}</span>
+                    </label>
+                  ))}
                 </div>
-                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <div className="grid gap-1 md:grid-cols-2">
-                    {projects.map((project) => (
-                      <label key={project.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
-                        <input type="checkbox" name="ids" value={project.id} className="h-4 w-4 accent-[var(--accent)]" />
-                        <span>
-                          {project.code} - {project.title}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <Link href={closeBulkHref} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">
-                  Inchide bulk
-                </Link>
-              </form>
-            ) : null}
+              </div>
+              <Link href={closeBulkHref} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">Inchide</Link>
+            </form>
           </Card>
-        ) : null}
+        )}
 
-        <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Filtre</p>
-          <form className="mb-4 mt-2 grid gap-3 md:grid-cols-3">
-            <Input name="q" placeholder="Filtru dupa nume proiect" defaultValue={query} />
-            <input type="hidden" name="page" value="1" />
-            <select name="status" defaultValue={statusFilter || ""} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]">
-              <option value="">Toate statusurile</option>
-              {projectStatusOptions.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary">
-              Aplica filtre
-            </Button>
-          </form>
-
-          {projects.length === 0 ? (
-            <EmptyState title="Nu exista proiecte" description="Adauga primul proiect pentru a incepe planificarea." />
-          ) : (
-            <div>
-            <div className="space-y-4 lg:hidden">
+        {/* Project list */}
+        {projects.length === 0 ? (
+          <EmptyState title="Nu exista proiecte" description="Adauga primul proiect pentru a incepe planificarea." />
+        ) : (
+          <>
+            {/* Mobile cards */}
+            <div className="space-y-2 lg:hidden">
               {projects.map((project) => {
                 const status = mapStatus(project.status);
                 return (
-                  <div key={project.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.5),rgba(15,25,37,0.5))] p-5 shadow-sm active:bg-[var(--surface-2)]">
-                    <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border)]/50 pb-3">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/proiecte/${project.id}`} className="block truncate text-lg font-bold text-[var(--foreground)] hover:text-[var(--accent-strong)]">
-                          {project.title}
-                        </Link>
-                        <p className="mt-0.5 font-mono text-[11px] font-medium uppercase tracking-wider text-[var(--muted-strong)]">{project.code}</p>
-                      </div>
-                      <Badge tone={status.tone} className="shrink-0">{status.label}</Badge>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
-                        <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-                        <span className="truncate">{project.client.name}</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 rounded-xl bg-[rgba(13,20,30,0.4)] p-3">
-                        <div className="space-y-0.5">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Progres</p>
-                          <p className="text-sm font-semibold text-[var(--foreground)]">{project.progressPercent}%</p>
+                  <Link key={project.id} href={`/proiecte/${project.id}`} className="block">
+                    <Card className="active:bg-[var(--surface-2)]" rail="project">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[var(--foreground)]">{project.title}</p>
+                          <p className="mt-0.5 text-xs text-[var(--muted)]">
+                            {project.code} · {project.client.name}
+                          </p>
                         </div>
-                        <div className="space-y-0.5">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Buget Estimat</p>
-                          <p className="text-sm font-semibold text-[var(--foreground)]">{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
-                        </div>
+                        <Badge tone={status.tone} className="shrink-0">{status.label}</Badge>
                       </div>
-
-                      <div className="space-y-1 text-xs text-[var(--muted)]">
-                        <p className="flex items-center gap-1.5">
-                          <span className="font-medium text-[var(--muted-strong)]">Interval:</span>
-                          {formatProjectDates(project.startDate, project.endDate)}
-                        </p>
-                        <p className="flex items-center gap-1.5">
-                          <span className="font-medium text-[var(--muted-strong)]">Coordonator:</span>
-                          {project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "nealocat"}
-                        </p>
+                      <div className="mt-2 flex items-center gap-4 text-xs text-[var(--muted)]">
+                        <span>{project.progressPercent}%</span>
+                        <span>{formatCurrency(project.estimatedBudget?.toString() || 0)}</span>
+                        <span className="ml-auto">{formatProjectDates(project.startDate, project.endDate)}</span>
                       </div>
-                    </div>
-                    {canUpdate || canDelete ? (
-                      <div className="mt-3 flex flex-col gap-2">
-                        {canUpdate ? (
-                          <form action={updateProjectStatusAction} className="flex flex-col gap-2">
-                            <input type="hidden" name="id" value={project.id} />
-                            <div className="grid grid-cols-[1fr_auto] gap-2">
-                              <select name="status" defaultValue={project.status} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--border-strong)] focus:outline-none">
-                                {projectStatusOptions.map((st) => (
-                                  <option key={st.value} value={st.value}>
-                                    {st.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <Button variant="secondary" type="submit" className="h-11 px-4">
-                                Salveaza
-                              </Button>
-                            </div>
-                          </form>
-                        ) : null}
-                        {canDelete ? (
-                          <form action={deleteProject}>
-                            <input type="hidden" name="id" value={project.id} />
-                            <Button variant="destructive" type="submit" className="h-11 w-full">
-                              Sterge Proiect
-                            </Button>
-                          </form>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                  </div>
+                    </Card>
+                  </Link>
                 );
               })}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] lg:block">
+
+            {/* Desktop table */}
+            <Card flush className="hidden lg:block">
               <Table>
                 <thead>
                   <tr>
@@ -347,56 +286,45 @@ export default async function ProjectsPage({
                     const status = mapStatus(project.status);
                     return (
                       <tr key={project.id}>
-                        <TD>{project.code}</TD>
+                        <TD><span className="font-mono text-xs">{project.code}</span></TD>
                         <TD>
-                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[var(--accent-strong)] hover:text-[var(--foreground)] hover:underline">
+                          <Link href={`/proiecte/${project.id}`} className="font-medium text-[var(--accent)] hover:underline">
                             {project.title}
                           </Link>
-                          <p className="text-xs text-[var(--muted)]">{project.siteAddress}</p>
+                          {project.siteAddress && <p className="text-xs text-[var(--muted)]">{project.siteAddress}</p>}
                           <p className="text-xs text-[var(--muted)]">{formatProjectDates(project.startDate, project.endDate)}</p>
                         </TD>
                         <TD>{project.client.name}</TD>
-                        <TD>
-                          <p>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</p>
-                          <p className="text-xs text-[var(--muted)]">Manager responsabil de proiect</p>
-                        </TD>
+                        <TD>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</TD>
                         <TD>
                           <p>{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
                           <p className="text-xs text-[var(--muted)]">Contract: {formatCurrency(project.contractValue?.toString() || 0)}</p>
                         </TD>
-                        <TD>{project.progressPercent}%</TD>
-                        <TD>
-                          <Badge tone={status.tone}>{status.label}</Badge>
-                        </TD>
+                        <TD><span className="tabular-nums">{project.progressPercent}%</span></TD>
+                        <TD><Badge tone={status.tone}>{status.label}</Badge></TD>
                         <TD>
                           {canUpdate || canDelete ? (
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                               {canUpdate ? (
-                                <form action={updateProjectStatusAction}>
+                                <form action={updateProjectStatusAction} className="flex gap-1">
                                   <input type="hidden" name="id" value={project.id} />
-                                  <select name="status" defaultValue={project.status} className="h-9 rounded-md px-2 text-xs">
+                                  <select name="status" defaultValue={project.status} className="h-8 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-1)] px-2 text-xs">
                                     {projectStatusOptions.map((st) => (
-                                      <option key={st.value} value={st.value}>
-                                        {st.label}
-                                      </option>
+                                      <option key={st.value} value={st.value}>{st.label}</option>
                                     ))}
                                   </select>
-                                  <Button size="sm" variant="ghost" type="submit" className="ml-1">
-                                    Salveaza
-                                  </Button>
+                                  <Button size="sm" variant="ghost" type="submit">OK</Button>
                                 </form>
                               ) : null}
                               {canDelete ? (
                                 <form action={deleteProject}>
                                   <input type="hidden" name="id" value={project.id} />
-                                  <Button size="sm" variant="destructive" type="submit">
-                                    Sterge
-                                  </Button>
+                                  <Button size="sm" variant="destructive" type="submit">Sterge</Button>
                                 </form>
                               ) : null}
                             </div>
                           ) : (
-                            <span className="text-xs text-[var(--muted)]">Fara drept de editare</span>
+                            <span className="text-xs text-[var(--muted)]">—</span>
                           )}
                         </TD>
                       </tr>
@@ -404,27 +332,28 @@ export default async function ProjectsPage({
                   })}
                 </tbody>
               </Table>
-            </div>
-            </div>
-          )}
-          <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)]/60 pt-6 text-sm text-[var(--muted)] sm:flex-row">
-            <span className="font-medium">
-              Pagina <span className="text-[var(--foreground)]">{currentPage}</span> din <span className="text-[var(--foreground)]">{totalPages}</span>
-            </span>
-            <div className="flex w-full gap-3 sm:w-auto">
-              <PaginationLink
-                href={currentPage > 1 ? buildProiecteHref({ page: currentPage - 1, q: query, status: statusFilter }) : null}
-                label="Anterior"
-                disabled={currentPage <= 1}
-              />
-              <PaginationLink
-                href={currentPage < totalPages ? buildProiecteHref({ page: currentPage + 1, q: query, status: statusFilter }) : null}
-                label="Urmator"
-                disabled={currentPage >= totalPages}
-              />
-            </div>
+            </Card>
+          </>
+        )}
+
+        {/* Pagination */}
+        <div className="flex flex-col items-center justify-between gap-3 text-sm text-[var(--muted)] sm:flex-row">
+          <span>
+            Pagina <span className="font-medium text-[var(--foreground)]">{currentPage}</span> din <span className="font-medium text-[var(--foreground)]">{totalPages}</span>
+          </span>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <PaginationLink
+              href={currentPage > 1 ? buildProiecteHref({ page: currentPage - 1, q: query, status: statusFilter }) : null}
+              label="Anterior"
+              disabled={currentPage <= 1}
+            />
+            <PaginationLink
+              href={currentPage < totalPages ? buildProiecteHref({ page: currentPage + 1, q: query, status: statusFilter }) : null}
+              label="Urmator"
+              disabled={currentPage >= totalPages}
+            />
           </div>
-        </Card>
+        </div>
       </div>
     </PermissionGuard>
   );

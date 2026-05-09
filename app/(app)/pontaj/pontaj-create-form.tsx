@@ -14,6 +14,8 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-[#ffb4bd]">{message}</p>;
 }
 
+import { saveTimeEntryOffline } from "@/src/lib/offline-sync";
+
 export function PontajCreateForm({
   projects,
   workOrders,
@@ -40,8 +42,31 @@ export function PontajCreateForm({
 
   const effectiveWorkOrderId = scopedWorkOrders.some((item) => item.id === selectedWorkOrderId) ? selectedWorkOrderId : "";
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    if (!navigator.onLine) {
+      e.preventDefault();
+      const formData = new FormData(e.currentTarget);
+      await saveTimeEntryOffline({
+        projectId: formData.get("projectId") as string,
+        userId: formData.get("userId") as string | undefined,
+        workOrderId: formData.get("workOrderId") as string | undefined,
+        shiftMode: formData.get("shiftMode") as "STANDARD" | "CUSTOM",
+        startDate: formData.get("startDate") as string,
+        startTime: formData.get("startTime") as string,
+        endDate: formData.get("endDate") as string | undefined,
+        endTime: formData.get("endTime") as string | undefined,
+        breakMinutes: Number(formData.get("breakMinutes")) || 0,
+        note: formData.get("note") as string | undefined,
+      });
+      toast.success("Salvat offline. Se va sincroniza automat cand revine conexiunea.");
+      e.currentTarget.reset();
+      setSelectedProjectId("");
+      setSelectedWorkOrderId("");
+    }
+  };
+
   return (
-    <form action={formAction} className="mt-4 space-y-4">
+    <form action={formAction} onSubmit={handleSubmit} className="mt-4 space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Angajat</label>

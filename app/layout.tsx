@@ -1,25 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ReactQueryProvider } from "@/src/components/providers/react-query-provider";
 import { HeroUIRouterProvider } from "@/src/components/providers/heroui-provider";
 import { ThemeProvider } from "@/src/components/providers/theme-provider";
+import { SyncProvider } from "@/src/components/providers/sync-provider";
 import "./globals.css";
-
-const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-ibm-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "ELTGRUP Manager",
@@ -30,6 +18,14 @@ export const metadata: Metadata = {
     shortcut: "/icon.svg",
     apple: "/icon.svg",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ELTManager",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -37,8 +33,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0a0d14" },
-    { media: "(prefers-color-scheme: light)", color: "#f1f3f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#090c12" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f9fb" },
   ],
   colorScheme: "dark light",
 };
@@ -49,15 +45,17 @@ export default function RootLayout({
   return (
     <html
       lang="ro"
-      className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
       <body className="antialiased">
         <ThemeProvider>
           <HeroUIRouterProvider>
             <ReactQueryProvider>
-              {children}
-              <Toaster richColors position="top-right" />
+              <SyncProvider>
+                {children}
+                <Toaster richColors position="top-right" />
+              </SyncProvider>
             </ReactQueryProvider>
           </HeroUIRouterProvider>
         </ThemeProvider>

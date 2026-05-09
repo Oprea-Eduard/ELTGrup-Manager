@@ -1,10 +1,13 @@
 import { FgoInvoiceStatus, ProjectStatus, RoleKey } from "@prisma/client";
 import Link from "next/link";
+import { ArrowRight, Clock, FileWarning, Package, AlertTriangle } from "lucide-react";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { Badge } from "@/src/components/ui/badge";
 import { Card } from "@/src/components/ui/card";
 import { KpiCard } from "@/src/components/ui/kpi-card";
-import { ListItem, ListItemSlim } from "@/src/components/ui/list-item";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { Section } from "@/src/components/ui/section";
+import { StatRow } from "@/src/components/ui/stat-row";
 import { DashboardScheduleTable } from "@/src/components/dashboard/schedule-table";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
@@ -316,226 +319,202 @@ export default async function DashboardPage() {
     };
   }
 
-  const dashboardData = await getDashboardData();
-  const {
-    delayedTasks,
-    todaySchedule,
-    clockedIn,
-    pendingMaterialApprovals,
-    unpaidInvoices,
-    latestActivities,
-    chartData,
-    offersDraft,
-    offersSent,
-    offersAccepted,
-    avizareProjects,
-    activeProjects,
-    plannedProjects,
-    blockedProjects,
-    completedProjects,
-    todoOrders,
-    inProgressOrders,
-    blockedOrders,
-    fgoStats,
-  } = dashboardData;
-  const receivables = Number(unpaidInvoices._sum.totalAmount || 0) - Number(unpaidInvoices._sum.paidAmount || 0);
+  const d = await getDashboardData();
+  const receivables = Number(d.unpaidInvoices._sum.totalAmount || 0) - Number(d.unpaidInvoices._sum.paidAmount || 0);
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
       <div className="page-stack">
         <PageHeader title="Panou operational" subtitle={roleContext.subtitle} />
 
+        {/* ── KPI Strip — severity-colored, clickable ── */}
         <section className="page-kpis">
-          <KpiCard label="Proiecte active" value={String(activeProjects)} helper="in executie" />
-          <KpiCard label="Lucrari intarziate" value={String(delayedTasks)} helper="necesita interventie" />
-          <KpiCard label="Pontaje active" value={String(clockedIn)} helper="echipe in teren" />
-          <KpiCard label="Cereri materiale" value={String(pendingMaterialApprovals)} helper="in asteptare" />
-          <KpiCard label="Creante neincasate" value={formatCurrency(receivables)} helper="expunere curenta" />
+          <KpiCard
+            label="Proiecte active"
+            value={String(d.activeProjects)}
+            helper="in executie"
+            severity="info"
+            href="/proiecte"
+          />
+          <KpiCard
+            label="Lucrari intarziate"
+            value={String(d.delayedTasks)}
+            helper="necesita interventie"
+            severity={d.delayedTasks > 0 ? "blocked" : "active"}
+            href="/lucrari"
+          />
+          <KpiCard
+            label="Pontaje active"
+            value={String(d.clockedIn)}
+            helper="echipe in teren"
+            severity="active"
+            href="/pontaj"
+          />
+          <KpiCard
+            label="Cereri materiale"
+            value={String(d.pendingMaterialApprovals)}
+            helper="in asteptare"
+            severity={d.pendingMaterialApprovals > 0 ? "pending" : "done"}
+            href="/materiale"
+          />
+          <KpiCard
+            label="Creante neincasate"
+            value={formatCurrency(receivables)}
+            helper="expunere curenta"
+            severity={receivables > 0 ? "pending" : "done"}
+            href="/financiar"
+          />
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
-          <Card className="p-0">
-            <div className="border-b border-[var(--border)] px-5 py-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Privire generala</p>
-              <h2 className="mt-1 text-xl font-semibold text-[var(--foreground)]">Ore facturabile pe proiect</h2>
-              <p className="text-sm text-[var(--muted)]">Distribuie atentia manageriala pe proiectele cu incarcare ridicata.</p>
-            </div>
-            <div className="px-4 pb-2 pt-2 sm:px-5">
-              <ClientProductivityChart data={chartData} />
-            </div>
-            <div className="grid gap-2 border-t border-[var(--border)] px-5 py-4 md:grid-cols-3">
-              <ListItem className="flex-col items-start gap-1">
-                <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Ritm executie</p>
-                <p className="text-sm font-semibold text-[var(--foreground)]">{todaySchedule.length} taskuri planificate azi</p>
-              </ListItem>
-              <ListItem className="flex-col items-start gap-1">
-                <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Flux financiar</p>
-                <p className="text-sm font-semibold text-[var(--foreground)]">{formatCurrency(receivables)} neincasat</p>
-              </ListItem>
-              <ListItem className="flex-col items-start gap-1">
-                <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Aprobari materiale</p>
-                <p className="text-sm font-semibold text-[var(--foreground)]">{pendingMaterialApprovals} in asteptare</p>
-              </ListItem>
-            </div>
-          </Card>
-
-          <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Activitate recenta</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele miscari in sistem</h2>
-            <div className="mt-3 space-y-2">
-              {latestActivities.length === 0 ? (
-                <ListItemSlim className="text-[var(--muted)]">
-                  Nu exista activitate recenta in aria ta de acces.
-                </ListItemSlim>
-              ) : null}
-              {latestActivities.map((log) => (
-                <ListItemSlim key={log.id} className="flex-col items-start gap-1">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">{log.action}</p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {fullName(log.user?.firstName, log.user?.lastName)} • {log.entityType} #{log.entityId.slice(-6)}
-                  </p>
-                  <p className="text-xs text-[var(--muted)]">{formatDate(log.createdAt)}</p>
-                </ListItemSlim>
-              ))}
-            </div>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-3">
-          <FgoWidget fgoStats={fgoStats} />
-
-          <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Pipeline comercial</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Oferte tehnice</h2>
-            <div className="mt-3 space-y-1 text-sm">
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Draft (in lucru)</span>
-                <span className="font-semibold text-[var(--foreground)]">{offersDraft}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Trimise la client</span>
-                <span className="font-semibold text-[var(--foreground)]">{offersSent}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Acceptate (in conversie)</span>
-                <span className="font-semibold text-[var(--success)]">{offersAccepted}</span>
-              </ListItem>
-              <Link
-                href="/oferte"
-                className="mt-2 inline-block text-xs text-[var(--accent)] hover:underline"
-              >
-                Vezi toate ofertele →
-              </Link>
-            </div>
-          </Card>
-
-          <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Avizare ISU</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">In asteptare autorizatie</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              {avizareProjects.length === 0 ? (
-                <p className="text-xs text-[var(--muted)]">Niciun proiect in faza de avizare ISU.</p>
-              ) : (
-                avizareProjects.map((project) => {
-                  const phase = project.phases[0];
-                  const daysLeft = phase?.endDate
-                    ? Math.ceil((new Date(phase.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                    : null;
-                  return (
-                    <ListItem
-                      key={project.id}
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-[var(--foreground)]">
-                          {project.code} — {project.title}
-                        </p>
-                        {daysLeft !== null && (
-                          <p className={`text-xs ${daysLeft < 7 ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}>
-                            {daysLeft > 0 ? `Termen: ${daysLeft} zile` : "Termen DEPASIT"}
-                          </p>
-                        )}
-                      </div>
-                      <Link
-                        href={`/proiecte/${project.id}`}
-                        className="ml-2 shrink-0 text-xs text-[var(--accent)] hover:underline"
-                      >
-                        Deschide
-                      </Link>
-                    </ListItem>
-                  );
-                })
+        {/* ── Action Queue — role-based actionable items ── */}
+        {(d.delayedTasks > 0 || d.pendingMaterialApprovals > 0 || d.overdueInvoices.length > 0) && (
+          <Card className="space-y-2" rail="alert">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">Necesita atentie</p>
+            <div className="space-y-1.5">
+              {d.delayedTasks > 0 && (
+                <Link href="/lucrari" className="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--status-blocked)]" />
+                  <span className="text-[var(--foreground)]"><strong>{d.delayedTasks}</strong> lucrari depasesc termenul</span>
+                  <ArrowRight className="ml-auto h-3.5 w-3.5 text-[var(--muted)]" />
+                </Link>
+              )}
+              {d.pendingMaterialApprovals > 0 && (
+                <Link href="/materiale" className="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]">
+                  <Package className="h-4 w-4 shrink-0 text-[var(--status-pending)]" />
+                  <span className="text-[var(--foreground)]"><strong>{d.pendingMaterialApprovals}</strong> cereri materiale de aprobat</span>
+                  <ArrowRight className="ml-auto h-3.5 w-3.5 text-[var(--muted)]" />
+                </Link>
+              )}
+              {d.overdueInvoices.length > 0 && (
+                <Link href="/financiar" className="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]">
+                  <FileWarning className="h-4 w-4 shrink-0 text-[var(--status-blocked)]" />
+                  <span className="text-[var(--foreground)]"><strong>{d.overdueInvoices.length}</strong> facturi restante</span>
+                  <ArrowRight className="ml-auto h-3.5 w-3.5 text-[var(--muted)]" />
+                </Link>
               )}
             </div>
           </Card>
+        )}
 
-          <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status proiecte</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Portofoliu proiecte</h2>
-            <div className="mt-3 space-y-1 text-sm">
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Planificate</span>
-                <span className="font-semibold text-[var(--foreground)]">{plannedProjects}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Active</span>
-                <span className="font-semibold text-[var(--foreground)]">{activeProjects}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Blocate</span>
-                <span className="font-semibold text-[var(--foreground)]">{blockedProjects}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Finalizate</span>
-                <span className="font-semibold text-[var(--foreground)]">{completedProjects}</span>
-              </ListItem>
+        {/* ── Two-column: Chart + Activity ── */}
+        <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+          <Card flush>
+            <div className="px-5 py-4">
+              <h2 className="text-base font-semibold text-[var(--heading)]">Ore facturabile pe proiect</h2>
+              <p className="mt-0.5 text-sm text-[var(--muted)]">Distributia orelor pontate pe proiecte active</p>
+            </div>
+            <div className="px-4 pb-3">
+              <ClientProductivityChart data={d.chartData} />
+            </div>
+            <div className="grid gap-px border-t border-[var(--border)] bg-[var(--border)] md:grid-cols-3">
+              <div className="bg-[var(--surface-1)] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Planificate azi</p>
+                <p className="mt-1 text-lg font-semibold text-[var(--heading)] tabular-nums">{d.todaySchedule.length}</p>
+              </div>
+              <div className="bg-[var(--surface-1)] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Neincasat</p>
+                <p className="mt-1 text-lg font-semibold text-[var(--heading)] tabular-nums">{formatCurrency(receivables)}</p>
+              </div>
+              <div className="bg-[var(--surface-1)] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Aprobari</p>
+                <p className="mt-1 text-lg font-semibold text-[var(--heading)] tabular-nums">{d.pendingMaterialApprovals}</p>
+              </div>
             </div>
           </Card>
 
           <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status echipe</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Task si echipe</h2>
-            <div className="mt-3 space-y-1 text-sm">
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Taskuri TODO</span>
-                <span className="font-semibold text-[var(--foreground)]">{todoOrders}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">In progres</span>
-                <span className="font-semibold text-[var(--foreground)]">{inProgressOrders}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Blocate</span>
-                <span className="font-semibold text-[var(--foreground)]">{blockedOrders}</span>
-              </ListItem>
-              <ListItem>
-                <span className="text-[var(--muted-strong)]">Pontaj activ</span>
-                <span className="font-semibold text-[var(--foreground)]">{clockedIn}</span>
-              </ListItem>
-            </div>
-          </Card>
-
-          <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Focus pe rol</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Prioritati pentru rolul tau</h2>
-            <div className="mt-3 space-y-1">
-              {roleContext.focus.map((item, index) => (
-                <ListItem key={item} className="flex-col items-start gap-1">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Prioritate {index + 1}</p>
-                  <p className="text-[var(--muted-strong)]">{item}</p>
-                </ListItem>
-              ))}
-            </div>
+            <Section title="Activitate recenta">
+              {d.latestActivities.length === 0 ? (
+                <p className="text-sm text-[var(--muted)]">Nu exista activitate recenta.</p>
+              ) : (
+                <div className="space-y-3">
+                  {d.latestActivities.map((log) => (
+                    <div key={log.id} className="border-l-2 border-[var(--border)] pl-3">
+                      <p className="text-sm font-medium text-[var(--foreground)]">{log.action}</p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {fullName(log.user?.firstName, log.user?.lastName)} · {log.entityType} #{log.entityId.slice(-6)}
+                      </p>
+                      <p className="text-[11px] text-[var(--muted)]">{formatDate(log.createdAt)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Section>
           </Card>
         </section>
 
-        <Card className="p-0">
-          <div className="border-b border-[var(--border)] px-5 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Planificare executie</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Program echipe astazi</h2>
+        {/* ── Three-column: FGO + Pipeline + ISU ── */}
+        <section className="grid gap-4 xl:grid-cols-3">
+          <FgoWidget fgoStats={d.fgoStats} />
+
+          <Card>
+            <Section
+              title="Pipeline comercial"
+              actions={<Link href="/oferte" className="text-xs text-[var(--accent)] hover:underline">Vezi toate →</Link>}
+            >
+              <StatRow label="Draft (in lucru)" value={d.offersDraft} />
+              <StatRow label="Trimise la client" value={d.offersSent} />
+              <StatRow label="Acceptate" value={d.offersAccepted} />
+            </Section>
+          </Card>
+
+          <Card>
+            <Section title="Avizare ISU">
+              {d.avizareProjects.length === 0 ? (
+                <p className="text-sm text-[var(--muted)]">Niciun proiect in faza de avizare ISU.</p>
+              ) : (
+                <div className="space-y-2">
+                  {d.avizareProjects.map((project) => {
+                    const phase = project.phases[0];
+                    const daysLeft = phase?.endDate
+                      ? Math.ceil((new Date(phase.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                      : null;
+                    return (
+                      <Link key={project.id} href={`/proiecte/${project.id}`} className="block rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]">
+                        <p className="truncate font-medium text-[var(--foreground)]">{project.code} — {project.title}</p>
+                        {daysLeft !== null && (
+                          <p className={`text-xs ${daysLeft < 7 ? "text-[var(--status-blocked)]" : "text-[var(--muted)]"}`}>
+                            {daysLeft > 0 ? `Termen: ${daysLeft} zile` : "Termen DEPASIT"}
+                          </p>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </Section>
+          </Card>
+        </section>
+
+        {/* ── Two-column: Operational stats ── */}
+        <section className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <Section title="Portofoliu proiecte">
+              <StatRow label="Planificate" value={d.plannedProjects} />
+              <StatRow label="Active" value={d.activeProjects} />
+              <StatRow label="Blocate" value={d.blockedProjects} />
+              <StatRow label="Finalizate" value={d.completedProjects} />
+            </Section>
+          </Card>
+
+          <Card>
+            <Section title="Lucrari si echipe">
+              <StatRow label="TODO" value={d.todoOrders} />
+              <StatRow label="In progres" value={d.inProgressOrders} />
+              <StatRow label="Blocate" value={d.blockedOrders} />
+              <StatRow label="Pontaj activ" value={d.clockedIn} />
+            </Section>
+          </Card>
+        </section>
+
+        {/* ── Schedule Table ── */}
+        <Card flush>
+          <div className="px-5 py-4">
+            <h2 className="text-base font-semibold text-[var(--heading)]">Program echipe astazi</h2>
           </div>
           <div className="p-3 sm:p-4">
             <DashboardScheduleTable
-              items={todaySchedule.map((item) => ({
+              items={d.todaySchedule.map((item) => ({
                 id: item.id,
                 title: item.title,
                 startLabel: item.startDate ? formatDate(item.startDate) : "-",

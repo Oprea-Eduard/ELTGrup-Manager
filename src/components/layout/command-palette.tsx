@@ -119,7 +119,7 @@ export function GlobalCommandPalette() {
         <div className="max-h-[400px] overflow-y-auto p-2">
           {filteredCommands.length === 0 ? (
             <div className="px-4 py-12 text-center text-[var(--muted)]">
-              Nu am găsit niciun rezultat pentru "{query}"
+              Nu am găsit niciun rezultat pentru &quot;{query}&quot;
             </div>
           ) : (
             Object.entries(
