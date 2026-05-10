@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "html/**",
+    "public/sw.js",
+    "create_e2e_user.js",
   ]),
 ]);
 

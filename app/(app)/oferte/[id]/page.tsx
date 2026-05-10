@@ -58,8 +58,9 @@ export default async function OfertaDetailPage({
     (sum, item) => sum + Number(item.totalPrice),
     0,
   );
+  const now = new Date();
   const daysUntilExpiry = Math.ceil(
-    (offer.validUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    (offer.validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
   const isExpired = daysUntilExpiry < 0;
 

@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
-import { ActionState } from "@/src/lib/action-state";
 import { notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
@@ -76,7 +75,7 @@ export const createWorkOrderAction = createSafeAction(
     permission: { resource: "TASKS", action: "CREATE" },
   },
   async (data, currentUser) => {
-    await assertProjectAccess(currentUser as any, data.projectId);
+    await assertProjectAccess(currentUser, data.projectId);
 
     let checklistItemsInput = undefined;
 
@@ -119,7 +118,7 @@ export const createWorkOrderAction = createSafeAction(
     });
 
     await logActivity({
-      userId: (currentUser as any).id,
+      userId: currentUser.id,
       entityType: "WORK_ORDER",
       entityId: created.id,
       action: "WORK_ORDER_CREATED",

@@ -4,6 +4,7 @@ import { requirePermission } from "./permissions";
 import { ActionState, fromZodError } from "./action-state";
 import { logActivity } from "./activity-log";
 import { checkRateLimit } from "./rate-limit";
+import type { AuthUserLike } from "./access-control";
 
 type SafeActionOptions<T extends z.ZodType, R = unknown> = {
   schema?: T;
@@ -33,7 +34,7 @@ function redactSensitiveData(data: unknown, fieldsToRedact: string[]) {
 
 export function createSafeAction<T extends z.ZodType, R>(
   options: SafeActionOptions<T, R>,
-  handler: (data: z.infer<T>, user: unknown) => Promise<R>
+  handler: (data: z.infer<T>, user: AuthUserLike) => Promise<R>
 ) {
   return async (arg1: unknown, arg2?: unknown): Promise<ActionState> => {
     // Determine if it's (state, formData) or just (formData)
@@ -46,9 +47,13 @@ export function createSafeAction<T extends z.ZodType, R>(
       checkRateLimit(rateLimitKey, { maxRequests: 60, windowMs: 60 * 1000 });
 
       // 1. Auth & Permission Check
-      let user = null;
+      let user: AuthUserLike | null = null;
       if (options.permission) {
         user = await requirePermission(options.permission.resource, options.permission.action);
+      }
+
+      if (!user) {
+        throw new Error("Sesiune invalida. Reautentificare necesara.");
       }
 
       // 2. Data Validation

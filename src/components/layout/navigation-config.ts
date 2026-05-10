@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { AppModule } from "@/src/lib/access-control";
 import {
   Bell,
+  BarChart3,
   BriefcaseBusiness,
   CalendarDays,
   ClipboardList,
@@ -17,6 +18,7 @@ import {
   Timer,
   Truck,
   Users,
+  MapPin,
   Wrench,
 } from "lucide-react";
 
@@ -34,6 +36,7 @@ export const navItems: NavItem[] = [
   { module: "dashboard", href: "/panou", label: "Panou", icon: LayoutDashboard, section: "Operare" },
   { module: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, section: "Operare" },
   { module: "time_tracking", href: "/pontaj", label: "Pontaj", icon: Timer, section: "Operare" },
+  { module: "field", href: "/teren", label: "Teren", icon: MapPin, section: "Operare" },
   { module: "reports", href: "/rapoarte-zilnice", label: "Rapoarte", icon: HardHat, section: "Operare" },
 
   // ─── Proiecte ───
@@ -50,6 +53,7 @@ export const navItems: NavItem[] = [
 
   // ─── Financiar ───
   { module: "financial", href: "/financiar", label: "Financiar", icon: Receipt, section: "Financiar" },
+  { module: "analytics", href: "/analitice", label: "Analitice", icon: BarChart3, section: "Financiar" },
   { module: "clients", href: "/clienti", label: "Clienti", icon: Users, section: "Financiar" },
   { module: "documents", href: "/documente", label: "Documente", icon: FileText, section: "Financiar" },
 

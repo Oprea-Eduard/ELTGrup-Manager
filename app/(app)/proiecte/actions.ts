@@ -1,11 +1,10 @@
 "use server";
 
-import { NotificationType, Prisma, ProjectStatus, ProjectType, RoleKey, WorkOrderStatus } from "@prisma/client";
+import { NotificationType, ProjectStatus, ProjectType, RoleKey, WorkOrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { assertProjectAccess, resolveAccessScope } from "@/src/lib/access-scope";
-import { ActionState } from "@/src/lib/action-state";
 import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
@@ -109,7 +108,7 @@ export const createProjectAction = createSafeAction(
   async (data, currentUser) => {
     const created = await ProjectService.create({
       ...data,
-      managerId: (currentUser as any).id,
+      managerId: currentUser.id,
       startDate: data.startDate ? new Date(data.startDate) : null,
       endDate: data.endDate ? new Date(data.endDate) : null,
     });
@@ -125,8 +124,8 @@ const updateProjectStatusActionInternal = createSafeAction(
     permission: { resource: "PROJECTS", action: "UPDATE" },
   },
   async (data, currentUser) => {
-    await assertProjectAccess(currentUser as any, data.id);
-    const updated = await ProjectService.updateStatus(data.id, data.status, (currentUser as any).id);
+    await assertProjectAccess(currentUser, data.id);
+    const updated = await ProjectService.updateStatus(data.id, data.status, currentUser.id);
     revalidateProjectRelatedPaths(data.id);
     return updated;
   }
