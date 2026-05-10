@@ -2,6 +2,7 @@ import { RoleKey } from "@prisma/client";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { auth } from "@/src/lib/auth";
 import { Badge } from "@/src/components/ui/badge";
+import { KpiCard } from "@/src/components/ui/kpi-card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { prisma } from "@/src/lib/prisma";
 import { getRolePermissionOverview, hasPermission, hasSuperAdminRole } from "@/src/lib/rbac";
@@ -35,25 +36,27 @@ export default async function SetariPage() {
     <PermissionGuard resource="SETTINGS" action="VIEW">
       <div className="page-stack">
         <PageHeader title="Setari / Administrare" subtitle="Identitate si control acces: conturi, roluri operationale, activare/dezactivare si audit de acces." />
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Utilizatori total</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{users.length}</p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Utilizatori activi</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{users.filter((u) => u.isActive).length}</p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Roluri disponibile</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{roles.length}</p>
-          </div>
-          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Super admini</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
-              {users.filter((u) => u.roles.some((r) => r.role.key === "SUPER_ADMIN")).length}
-            </p>
-          </div>
+        <section className="page-kpis">
+          <KpiCard
+            label="Utilizatori total"
+            value={users.length.toString()}
+            severity="info"
+          />
+          <KpiCard
+            label="Utilizatori activi"
+            value={users.filter((u) => u.isActive).length.toString()}
+            severity="active"
+          />
+          <KpiCard
+            label="Roluri disponibile"
+            value={roles.length.toString()}
+            severity="info"
+          />
+          <KpiCard
+            label="Super admini"
+            value={users.filter((u) => u.roles.some((r) => r.role.key === "SUPER_ADMIN")).length.toString()}
+            severity="done"
+          />
         </section>
         <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">

@@ -10,6 +10,7 @@ import { prisma } from "@/src/lib/prisma";
 
 function revalidateOfferPaths() {
   revalidatePath("/oferte");
+  revalidatePath("/oferte/[id]", "page");
   revalidatePath("/panou");
 }
 

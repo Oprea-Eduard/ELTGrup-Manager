@@ -6,6 +6,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
+import { KpiCard } from "@/src/components/ui/kpi-card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
@@ -215,19 +216,22 @@ export default async function EchipePage({
           </form>
         </Card>
 
-        <section className="grid gap-3 md:grid-cols-3">
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Active</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{activeTeams}</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Inactive</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{inactiveTeams}</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Membri disponibili</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{totalWorkers}</p>
-          </Card>
+        <section className="page-kpis">
+          <KpiCard
+            label="Active"
+            value={activeTeams.toString()}
+            severity="active"
+          />
+          <KpiCard
+            label="Inactive"
+            value={inactiveTeams.toString()}
+            severity={inactiveTeams > 0 ? "pending" : "done"}
+          />
+          <KpiCard
+            label="Membri disponibili"
+            value={totalWorkers.toString()}
+            severity="info"
+          />
         </section>
 
         {teams.length === 0 ? (

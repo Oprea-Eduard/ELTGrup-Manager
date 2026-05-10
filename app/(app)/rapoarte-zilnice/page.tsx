@@ -4,6 +4,7 @@ import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-butto
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { FormModal } from "@/src/components/forms/form-modal";
+import { KpiCard } from "@/src/components/ui/kpi-card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
@@ -151,19 +152,22 @@ export default async function RapoarteZilnicePage({
           </div>
         ) : null}
 
-        <section className="grid gap-3 md:grid-cols-3">
-          <Card>
-            <p className="text-xs text-[var(--muted)]">Rapoarte recente</p>
-            <p className="mt-2 text-2xl font-semibold">{totalReports}</p>
-          </Card>
-          <Card>
-            <p className="text-xs text-[var(--muted)]">Rapoarte cu blocaje</p>
-            <p className="mt-2 text-2xl font-semibold">{blockersCount}</p>
-          </Card>
-          <Card>
-            <p className="text-xs text-[var(--muted)]">Total muncitori raportati</p>
-            <p className="mt-2 text-2xl font-semibold">{totalWorkers}</p>
-          </Card>
+        <section className="page-kpis">
+          <KpiCard
+            label="Rapoarte recente"
+            value={totalReports.toString()}
+            severity="info"
+          />
+          <KpiCard
+            label="Rapoarte cu blocaje"
+            value={blockersCount.toString()}
+            severity={blockersCount > 0 ? "blocked" : "done"}
+          />
+          <KpiCard
+            label="Muncitori raportati"
+            value={totalWorkers.toString()}
+            severity="info"
+          />
         </section>
 
         {canCreate ? (

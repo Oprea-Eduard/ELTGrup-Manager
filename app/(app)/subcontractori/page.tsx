@@ -13,14 +13,10 @@ import { resolveAccessScope, subcontractorScopeWhere } from "@/src/lib/access-sc
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
-import {
-  archiveSubcontractor,
-  bulkArchiveSubcontractorsAction,
-  updateSubcontractorAction,
-  updateSubcontractorStatus,
-} from "./actions";
+import { bulkArchiveSubcontractorsAction } from "./actions";
 import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 import { SubcontractorCreateForm } from "./subcontractor-create-form";
+
 
 const subcontractorStatusLabels: Record<SubcontractorApprovalStatus, string> = {
   IN_VERIFICARE: "In verificare",
@@ -343,63 +339,29 @@ export default async function SubcontractoriPage({
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {subcontractors.map((company) => (
-            <Card key={company.id} className="space-y-3">
-              {company.deletedAt ? <Badge tone="warning">Arhivat</Badge> : null}
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-semibold text-[var(--foreground)]">{company.name}</p>
-                <Badge tone={getStatusTone(company.approvalStatus)}>{subcontractorStatusLabels[company.approvalStatus]}</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
-                <p>Contact: {company.contactName || "-"}</p>
-                <p>Email: {company.email || "-"}</p>
-                <p className="col-span-2">CUI: {company.cui || "-"}</p>
-                <p className="col-span-2">Alocari active: {company.assignments.length}</p>
-              </div>
-              <p className="text-xs text-[var(--muted)]">Nota: {company.notes || "-"}</p>
-
-              {canUpdate && !company.deletedAt ? (
-                <>
-                  <form action={updateSubcontractorAction} className="mt-3 grid gap-2">
-                    <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Date comerciale</p>
-                    <input type="hidden" name="id" value={company.id} />
-                    <Input name="name" defaultValue={company.name} />
-                    <Input name="cui" defaultValue={company.cui || ""} />
-                    <Input name="contactName" defaultValue={company.contactName || ""} />
-                    <Input name="email" defaultValue={company.email || ""} />
-                    <Input name="phone" defaultValue={company.phone || ""} />
-                    <Button type="submit" size="sm">Salveaza detalii</Button>
-                  </form>
-
-                  <form action={updateSubcontractorStatus} className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                    <input type="hidden" name="id" value={company.id} />
-                    <select name="approvalStatus" defaultValue={company.approvalStatus} className="h-9 w-full rounded-md border border-[var(--border)] px-2 text-xs">
-                      {SUBCONTRACTOR_APPROVAL_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {subcontractorStatusLabels[status]}
-                        </option>
-                      ))}
-                    </select>
-                    <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">Actualizeaza</Button>
-                  </form>
-                </>
-              ) : (
-                <p className="mt-3 text-xs text-[var(--muted)]">
-                  {company.deletedAt
-                    ? "Subcontractor arhivat. Poti consulta doar datele istorice."
-                    : "Doar utilizatorii cu drept de actualizare lucrari pot modifica subcontractorii."}
+            <Link key={company.id} href={`/subcontractori/${company.id}`} className="block">
+              <Card className="space-y-3 transition-colors hover:border-[var(--border-strong)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    {company.deletedAt ? <Badge tone="warning">Arhivat</Badge> : null}
+                    <p className="font-semibold text-[var(--foreground)]">{company.name}</p>
+                  </div>
+                  <Badge tone={getStatusTone(company.approvalStatus)}>{subcontractorStatusLabels[company.approvalStatus]}</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
+                  <p>Contact: {company.contactName || "-"}</p>
+                  <p>Email: {company.email || "-"}</p>
+                  <p className="col-span-2">CUI: {company.cui || "-"}</p>
+                  <p className="col-span-2">Alocari active: {company.assignments.length}</p>
+                </div>
+                {company.notes && (
+                  <p className="text-xs text-[var(--muted)] line-clamp-2">Nota: {company.notes}</p>
+                )}
+                <p className="text-[11px] font-medium text-[var(--accent)]">
+                  Deschide detalii →
                 </p>
-              )}
-              {canDelete && !company.deletedAt ? (
-                <form action={archiveSubcontractor} className="mt-2">
-                  <input type="hidden" name="id" value={company.id} />
-                  <ConfirmSubmitButton
-                    text="Arhiveaza subcontractor"
-                    confirmMessage={`Confirmi arhivarea subcontractorului ${company.name}?`}
-                    variant="destructive"
-                  />
-                </form>
-              ) : null}
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
 

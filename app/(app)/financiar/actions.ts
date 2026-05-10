@@ -122,6 +122,7 @@ export async function updateInvoiceStatus(formData: FormData): Promise<void> {
     }
 
     revalidatePath("/financiar");
+    revalidatePath("/financiar/[id]", "page");
     revalidatePath("/proiecte");
     revalidatePath("/panou");
   } catch {
