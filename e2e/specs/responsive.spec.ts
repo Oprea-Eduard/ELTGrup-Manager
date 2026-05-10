@@ -12,10 +12,11 @@ test.describe("Responsive Design", () => {
     await page.waitForSelector("text=Panou operational", { timeout: 10000 });
 
     // Hamburger menu / mobile nav drawer trigger
-    const mobileMenuTrigger = page.locator("button[aria-label*='menu'], button[aria-label*='navigare']");
+    const mobileMenuTrigger = page.getByLabel("Deschide meniul");
     if (await mobileMenuTrigger.isVisible().catch(() => false)) {
       await mobileMenuTrigger.click();
-      await expect(page.locator("nav")).toBeVisible();
+      await expect(page.getByRole("navigation").filter({ hasText: "Operare" })).toBeVisible();
+      await expect(page.getByRole("navigation").filter({ hasText: "Operare" })).toHaveJSProperty("clientHeight", 667 - 73);
     }
   });
 
@@ -36,7 +37,7 @@ test.describe("Responsive Design", () => {
     await page.goto("/panou");
     await page.waitForSelector("text=Panou operational", { timeout: 10000 });
 
-    await expect(page.locator("text=Proiecte active")).toBeVisible();
+    await expect(page.getByText("Proiecte active", { exact: true })).toBeVisible();
     await expect(page.locator("text=Ore facturabile pe proiect")).toBeVisible();
   });
 });

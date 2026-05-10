@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -35,18 +36,8 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
     return () => media.removeEventListener("change", closeOnDesktop);
   }, []);
 
-  return (
+  const drawer = (
     <>
-      <Button
-        size="icon"
-        variant="secondary"
-        className="shrink-0 lg:hidden"
-        onClick={handleOpen}
-        aria-label="Deschide meniul"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-
       {/* Backdrop */}
       {isOpen && (
         <div
@@ -58,10 +49,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
 
       {/* Drawer panel */}
       <aside
-        className={cn(
-          "fixed left-0 top-0 z-50 flex h-full w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--shell)] transition-transform duration-200 ease-out lg:hidden",
-          isOpen ? "translate-x-0" : "-translate-x-full",
-        )}
+        className="fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--shell)] lg:hidden"
       >
         <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
           <div>
@@ -114,6 +102,21 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
           })}
         </nav>
       </aside>
+    </>
+  );
+
+  return (
+    <>
+      <Button
+        size="icon"
+        variant="secondary"
+        className="shrink-0 lg:hidden"
+        onClick={handleOpen}
+        aria-label="Deschide meniul"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+      {isOpen && typeof document !== "undefined" ? createPortal(drawer, document.body) : null}
     </>
   );
 }
