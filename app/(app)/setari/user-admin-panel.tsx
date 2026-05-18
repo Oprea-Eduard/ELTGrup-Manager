@@ -1,291 +1,409 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
 import { RoleKey } from "@prisma/client";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Input } from "@/src/components/ui/input";
 import { ListItemSlim } from "@/src/components/ui/list-item";
 import { initialActionState } from "@/src/lib/action-state";
-import { cleanupDemoDataAction, createUserAction, deleteUserAction, toggleUserActiveAction, updateUserRolesAction } from "./actions";
+import {
+	cleanupDemoDataAction,
+	createUserAction,
+	deleteUserAction,
+	toggleUserActiveAction,
+	updateUserRolesAction,
+} from "./actions";
 
 type RoleOption = { id: string; key: RoleKey; label: string };
 type UserItem = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  isActive: boolean;
-  roleKeys: RoleKey[];
+	id: string;
+	firstName: string;
+	lastName: string;
+	email: string;
+	isActive: boolean;
+	roleKeys: RoleKey[];
 };
 
 function resolveSingleRole(user: UserItem): RoleKey {
-  if (user.roleKeys.includes(RoleKey.SUPER_ADMIN)) {
-    return RoleKey.SUPER_ADMIN;
-  }
-  return user.roleKeys[0] || RoleKey.WORKER;
+	if (user.roleKeys.includes(RoleKey.SUPER_ADMIN)) {
+		return RoleKey.SUPER_ADMIN;
+	}
+	return user.roleKeys[0] || RoleKey.WORKER;
 }
 
 const DEMO_CLEANUP_CONFIRM_TEXT = "STERGE DATELE DEMO";
 
+type PermissionFlags = {
+	canAssignSuperAdmin: boolean;
+	canCreateUsers: boolean;
+	canUpdateUsers: boolean;
+	canDeleteUsers: boolean;
+	canRunDemoCleanup: boolean;
+};
+
 export function UserAdminPanel({
-  users,
-  roles,
-  canAssignSuperAdmin,
-  canCreateUsers,
-  canUpdateUsers,
-  canDeleteUsers,
-  canRunDemoCleanup,
+	users,
+	roles,
+	permissions,
 }: {
-  users: UserItem[];
-  roles: RoleOption[];
-  canAssignSuperAdmin: boolean;
-  canCreateUsers: boolean;
-  canUpdateUsers: boolean;
-  canDeleteUsers: boolean;
-  canRunDemoCleanup: boolean;
+	users: UserItem[];
+	roles: RoleOption[];
+	permissions: PermissionFlags;
 }) {
-  const [state, formAction, pending] = useActionState(createUserAction, initialActionState);
-  const [cleanupState, cleanupFormAction, cleanupPending] = useActionState(cleanupDemoDataAction, initialActionState);
-  const [newUserRole, setNewUserRole] = useState<RoleKey>(RoleKey.WORKER);
-  const [confirmNewSuperAdmin, setConfirmNewSuperAdmin] = useState(false);
-  const [cleanupConfirmationText, setCleanupConfirmationText] = useState("");
-  const initialRoleSelections = useMemo(
-    () => Object.fromEntries(users.map((user) => [user.id, resolveSingleRole(user)])) as Record<string, RoleKey>,
-    [users],
-  );
-  const [roleSelections, setRoleSelections] = useState<Record<string, RoleKey>>(initialRoleSelections);
-  const roleLabelByKey = useMemo(() => new Map(roles.map((role) => [role.key, role.label])), [roles]);
+	const {
+		canAssignSuperAdmin,
+		canCreateUsers,
+		canUpdateUsers,
+		canDeleteUsers,
+		canRunDemoCleanup,
+	} = permissions;
+	const [state, formAction, pending] = useActionState(
+		createUserAction,
+		initialActionState,
+	);
+	const [cleanupState, cleanupFormAction, cleanupPending] = useActionState(
+		cleanupDemoDataAction,
+		initialActionState,
+	);
+	const [newUserRole, setNewUserRole] = useState<RoleKey>(RoleKey.WORKER);
+	const [confirmNewSuperAdmin, setConfirmNewSuperAdmin] = useState(false);
+	const [cleanupConfirmationText, setCleanupConfirmationText] = useState("");
+	const roleLabelByKey = useMemo(
+		() => new Map(roles.map((role) => [role.key, role.label])),
+		[roles],
+	);
 
-  useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
-    if (!state.ok && state.message) toast.error(state.message);
-  }, [state]);
+	const initialRoleSelections = useMemo(
+		() =>
+			Object.fromEntries(
+				users.map((user) => [user.id, resolveSingleRole(user)]),
+			) as Record<string, RoleKey>,
+		[users],
+	);
+	const [roleSelections, setRoleSelections] = useState<Record<string, RoleKey>>(
+		initialRoleSelections,
+	);
 
-  useEffect(() => {
-    if (cleanupState.ok && cleanupState.message) {
-      toast.success(cleanupState.message);
-      setCleanupConfirmationText("");
-    }
-    if (!cleanupState.ok && cleanupState.message) toast.error(cleanupState.message);
-  }, [cleanupState]);
+	useEffect(() => {
+		if (state.ok && state.message) toast.success(state.message);
+		if (!state.ok && state.message) toast.error(state.message);
+	}, [state]);
 
-  useEffect(() => {
-    setRoleSelections(initialRoleSelections);
-  }, [initialRoleSelections]);
+	useEffect(() => {
+		if (cleanupState.ok && cleanupState.message) {
+			toast.success(cleanupState.message);
+			setCleanupConfirmationText("");
+		}
+		if (!cleanupState.ok && cleanupState.message)
+			toast.error(cleanupState.message);
+	}, [cleanupState]);
 
-  const orderedRoles = useMemo(() => [...roles].sort((a, b) => a.label.localeCompare(b.label, "ro")), [roles]);
-  const creatableRoles = useMemo(
-    () => orderedRoles.filter((role) => canAssignSuperAdmin || role.key !== RoleKey.SUPER_ADMIN),
-    [canAssignSuperAdmin, orderedRoles],
-  );
+	const orderedRoles = useMemo(
+		() => roles.toSorted((a, b) => a.label.localeCompare(b.label, "ro")),
+		[roles],
+	);
+	const creatableRoles = useMemo(
+		() =>
+			orderedRoles.filter(
+				(role) => canAssignSuperAdmin || role.key !== RoleKey.SUPER_ADMIN,
+			),
+		[canAssignSuperAdmin, orderedRoles],
+	);
 
-  return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Cont nou</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Alege rolul activ</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Fiecare cont are un singur rol activ. Rolul selectat aici decide ce module poate vedea si ce actiuni poate face utilizatorul.
-        </p>
-        {canCreateUsers ? (
-          <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <Input name="firstName" placeholder="Prenume" required />
-            <Input name="lastName" placeholder="Nume" required />
-            <Input name="email" type="email" placeholder="Email" required />
-            <Input name="password" type="password" placeholder="Parola initiala" required />
-            <select
-              name="roleKey"
-              value={newUserRole}
-              onChange={(event) => {
-                const nextRole = event.target.value as RoleKey;
-                setNewUserRole(nextRole);
-                if (nextRole !== RoleKey.SUPER_ADMIN) setConfirmNewSuperAdmin(false);
-              }}
-              className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)]"
-            >
-              {creatableRoles.map((role) => (
-                <option key={role.id} value={role.key}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
-            <Input name="positionTitle" placeholder="Functie (optional)" />
-            <p className="md:col-span-2 xl:col-span-3 text-xs text-[var(--muted)]">
-              Selectia de rol inlocuieste accesul curent; este recomandat sa existe un singur rol activ per cont.
-            </p>
-            {newUserRole === RoleKey.SUPER_ADMIN ? (
-              <label className="md:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[var(--warning)]">
-                <input
-                  type="checkbox"
-                  name="confirmSuperAdminAssignment"
-                  value="CONFIRM_SUPER_ADMIN"
-                  checked={confirmNewSuperAdmin}
-                  onChange={(event) => setConfirmNewSuperAdmin(event.target.checked)}
-                  required
-                />
-                Confirm explicit atribuirea rolului SUPER_ADMIN.
-              </label>
-            ) : null}
-            <div className="md:col-span-2 xl:col-span-3 flex justify-end">
-              <Button type="submit" disabled={pending}>{pending ? "Se salveaza..." : "Creeaza cont"}</Button>
-            </div>
-          </form>
-        ) : (
-          <p className="mt-3 text-sm text-[var(--muted)]">Nu ai dreptul de a crea utilizatori noi.</p>
-        )}
-      </section>
+	return (
+		<div className="space-y-6">
+			<section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+				<p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
+					Cont nou
+				</p>
+				<h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+					Alege rolul activ
+				</h2>
+				<p className="mt-2 text-sm text-[var(--muted)]">
+					Fiecare cont are un singur rol activ. Rolul selectat aici decide ce
+					module poate vedea si ce actiuni poate face utilizatorul.
+				</p>
+				{canCreateUsers ? (
+					<form
+						action={formAction}
+						className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+					>
+						<Input name="firstName" placeholder="Prenume" required />
+						<Input name="lastName" placeholder="Nume" required />
+						<Input name="email" type="email" placeholder="Email" required />
+						<Input
+							name="password"
+							type="password"
+							placeholder="Parola initiala"
+							required
+						/>
+						<select
+							name="roleKey"
+							value={newUserRole}
+							onChange={(event) => {
+								const nextRole = event.target.value as RoleKey;
+								setNewUserRole(nextRole);
+								if (nextRole !== RoleKey.SUPER_ADMIN)
+									setConfirmNewSuperAdmin(false);
+							}}
+							className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)]"
+						>
+							{creatableRoles.map((role) => (
+								<option key={role.id} value={role.key}>
+									{role.label}
+								</option>
+							))}
+						</select>
+						<Input name="positionTitle" placeholder="Functie (optional)" />
+						<p className="md:col-span-2 xl:col-span-3 text-xs text-[var(--muted)]">
+							Selectia de rol inlocuieste accesul curent; este recomandat sa
+							existe un singur rol activ per cont.
+						</p>
+						{newUserRole === RoleKey.SUPER_ADMIN ? (
+							<label className="md:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[var(--warning)]">
+								<input
+									type="checkbox"
+									name="confirmSuperAdminAssignment"
+									value="CONFIRM_SUPER_ADMIN"
+									checked={confirmNewSuperAdmin}
+									onChange={(event) =>
+										setConfirmNewSuperAdmin(event.target.checked)
+									}
+									required
+								/>
+								Confirm explicit atribuirea rolului SUPER_ADMIN.
+							</label>
+						) : null}
+						<div className="md:col-span-2 xl:col-span-3 flex justify-end">
+							<Button type="submit" disabled={pending}>
+								{pending ? "Se salveaza..." : "Creeaza cont"}
+							</Button>
+						</div>
+					</form>
+				) : (
+					<p className="mt-3 text-sm text-[var(--muted)]">
+						Nu ai dreptul de a crea utilizatori noi.
+					</p>
+				)}
+			</section>
 
-      <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Utilizatori si permisiuni</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Rolul activ al fiecarui cont</h2>
-        <div className="mt-3 space-y-3">
-          {users.length === 0 ? (
-            <ListItemSlim className="text-[var(--muted)]">
-              Nu exista utilizatori disponibili in acest mediu.
-            </ListItemSlim>
-          ) : null}
-          {users.map((user) => (
-            <div key={user.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-[var(--foreground)]">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-[var(--muted)]">{user.email}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {user.roleKeys.map((roleKey) => (
-                      <Badge key={roleKey} tone="neutral">
-                        {roleLabelByKey.get(roleKey) || roleKey}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <Badge tone={user.isActive ? "success" : "danger"}>{user.isActive ? "Activ" : "Inactiv"}</Badge>
-              </div>
+			<section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+				<p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
+					Utilizatori si permisiuni
+				</p>
+				<h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+					Rolul activ al fiecarui cont
+				</h2>
+				<div className="mt-3 space-y-3">
+					{users.length === 0 ? (
+						<ListItemSlim className="text-[var(--muted)]">
+							Nu exista utilizatori disponibili in acest mediu.
+						</ListItemSlim>
+					) : null}
+					{users.map((user) => (
+						<div
+							key={user.id}
+							className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3"
+						>
+							<div className="flex flex-wrap items-center justify-between gap-2">
+								<div>
+									<p className="font-semibold text-[var(--foreground)]">
+										{user.firstName} {user.lastName}
+									</p>
+									<p className="text-xs text-[var(--muted)]">{user.email}</p>
+									<div className="mt-2 flex flex-wrap gap-2">
+										{user.roleKeys.map((roleKey) => (
+											<Badge key={roleKey} tone="neutral">
+												{roleLabelByKey.get(roleKey) || roleKey}
+											</Badge>
+										))}
+									</div>
+								</div>
+								<Badge tone={user.isActive ? "success" : "danger"}>
+									{user.isActive ? "Activ" : "Inactiv"}
+								</Badge>
+							</div>
 
-              {canUpdateUsers ? (
-                <form action={updateUserRolesAction} className="mt-3 space-y-2">
-                  <input type="hidden" name="userId" value={user.id} />
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <label className="text-xs text-[var(--muted-strong)]">
-                      <span className="mb-1 block uppercase tracking-[0.2em] text-[10px] text-[var(--muted)]">Rol activ</span>
-                      <select
-                        name="roleKey"
-                        value={roleSelections[user.id] || resolveSingleRole(user)}
-                        onChange={(event) => {
-                          const nextRole = event.target.value as RoleKey;
-                          setRoleSelections((current) => ({ ...current, [user.id]: nextRole }));
-                        }}
-                        disabled={user.roleKeys.includes(RoleKey.SUPER_ADMIN) && !canAssignSuperAdmin}
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)]"
-                      >
-                        {orderedRoles
-                          .filter((role) => {
-                            if (role.key !== RoleKey.SUPER_ADMIN) return true;
-                            return canAssignSuperAdmin || user.roleKeys.includes(RoleKey.SUPER_ADMIN);
-                          })
-                          .map((role) => (
-                            <option key={role.id} value={role.key}>
-                              {role.label}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                    {(roleSelections[user.id] || resolveSingleRole(user)) === RoleKey.SUPER_ADMIN && canAssignSuperAdmin ? (
-                      <label className="flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[var(--warning)]">
-                        <input type="checkbox" name="confirmSuperAdminAssignment" value="CONFIRM_SUPER_ADMIN" required />
-                        Confirm explicit atribuirea rolului SUPER_ADMIN.
-                      </label>
-                    ) : null}
-                  </div>
-                  {user.roleKeys.length > 1 ? (
-                    <p className="text-xs text-[var(--warning)]">
-                      Contul are mai multe roluri istorice. Salvarea va pastra doar rolul selectat.
-                    </p>
-                  ) : null}
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Button variant="secondary" size="sm" type="submit">Salveaza rol</Button>
-                  </div>
-                </form>
-              ) : null}
+							{canUpdateUsers ? (
+								<form action={updateUserRolesAction} className="mt-3 space-y-2">
+									<input type="hidden" name="userId" value={user.id} />
+									<div className="grid gap-2 md:grid-cols-2">
+										<label className="text-xs text-[var(--muted-strong)]">
+											<span className="mb-1 block uppercase tracking-[0.2em] text-[10px] text-[var(--muted)]">
+												Rol activ
+											</span>
+											<select
+												name="roleKey"
+												value={
+													roleSelections[user.id] || resolveSingleRole(user)
+												}
+												onChange={(event) => {
+													const nextRole = event.target.value as RoleKey;
+													setRoleSelections((current) => ({
+														...current,
+														[user.id]: nextRole,
+													}));
+												}}
+												disabled={
+													user.roleKeys.includes(RoleKey.SUPER_ADMIN) &&
+													!canAssignSuperAdmin
+												}
+												className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)]"
+											>
+												{orderedRoles.flatMap((role) => {
+													if (
+														role.key === RoleKey.SUPER_ADMIN &&
+														!canAssignSuperAdmin &&
+														!user.roleKeys.includes(RoleKey.SUPER_ADMIN)
+													)
+														return [];
+													return [
+														<option key={role.id} value={role.key}>
+															{role.label}
+														</option>,
+													];
+												})}
+											</select>
+										</label>
+										{(roleSelections[user.id] || resolveSingleRole(user)) ===
+											RoleKey.SUPER_ADMIN && canAssignSuperAdmin ? (
+											<label className="flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[var(--warning)]">
+												<input
+													type="checkbox"
+													name="confirmSuperAdminAssignment"
+													value="CONFIRM_SUPER_ADMIN"
+													required
+												/>
+												Confirm explicit atribuirea rolului SUPER_ADMIN.
+											</label>
+										) : null}
+									</div>
+									{user.roleKeys.length > 1 ? (
+										<p className="text-xs text-[var(--warning)]">
+											Contul are mai multe roluri istorice. Salvarea va pastra
+											doar rolul selectat.
+										</p>
+									) : null}
+									<div className="flex flex-wrap items-center justify-end gap-2">
+										<Button variant="secondary" size="sm" type="submit">
+											Salveaza rol
+										</Button>
+									</div>
+								</form>
+							) : null}
 
-              {canUpdateUsers ? (
-                <form action={toggleUserActiveAction} className="mt-2 flex justify-end">
-                  <input type="hidden" name="userId" value={user.id} />
-                  <ConfirmSubmitButton
-                    size="sm"
-                    variant={user.isActive ? "destructive" : "default"}
-                    text={user.isActive ? "Dezactiveaza" : "Activeaza"}
-                    confirmMessage={
-                      user.isActive
-                        ? `Confirmi dezactivarea contului ${user.email}? Utilizatorul nu va mai putea intra in aplicatie.`
-                        : `Confirmi reactivarea contului ${user.email}?`
-                    }
-                  />
-                </form>
-              ) : null}
+							{canUpdateUsers ? (
+								<form
+									action={toggleUserActiveAction}
+									className="mt-2 flex justify-end"
+								>
+									<input type="hidden" name="userId" value={user.id} />
+									<ConfirmSubmitButton
+										size="sm"
+										variant={user.isActive ? "destructive" : "default"}
+										text={user.isActive ? "Dezactiveaza" : "Activeaza"}
+										confirmMessage={
+											user.isActive
+												? `Confirmi dezactivarea contului ${user.email}? Utilizatorul nu va mai putea intra in aplicatie.`
+												: `Confirmi reactivarea contului ${user.email}?`
+										}
+									/>
+								</form>
+							) : null}
 
-              {canDeleteUsers && (!user.roleKeys.includes(RoleKey.SUPER_ADMIN) || canAssignSuperAdmin) ? (
-                <form action={deleteUserAction} className="mt-2 flex justify-end">
-                  <input type="hidden" name="userId" value={user.id} />
-                  <ConfirmSubmitButton
-                    variant="destructive"
-                    size="sm"
-                    text="Sterge cont"
-                    confirmMessage={`Confirmi stergerea contului ${user.email}? Actiunea invalideaza accesul imediat si anonimizeaza emailul.`}
-                  />
-                </form>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      </section>
+							{canDeleteUsers &&
+							(!user.roleKeys.includes(RoleKey.SUPER_ADMIN) ||
+								canAssignSuperAdmin) ? (
+								<form
+									action={deleteUserAction}
+									className="mt-2 flex justify-end"
+								>
+									<input type="hidden" name="userId" value={user.id} />
+									<ConfirmSubmitButton
+										variant="destructive"
+										size="sm"
+										text="Sterge cont"
+										confirmMessage={`Confirmi stergerea contului ${user.email}? Actiunea invalideaza accesul imediat si anonimizeaza emailul.`}
+									/>
+								</form>
+							) : null}
+						</div>
+					))}
+				</div>
+			</section>
 
-      <section className="rounded-2xl border border-[var(--warning)]/60 bg-[rgba(88,45,12,0.16)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--warning)]">Curatare demo / onboarding</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--warning)]">Sterge datele boilerplate de seed</h2>
-        <p className="mt-2 text-sm text-[var(--warning)]">
-          Actiunea curata doar inregistrarile demo identificate explicit in <code>prisma/seed.ts</code>, fara a atinge metadata RBAC
-          (roluri/permisiuni) si fara a sterge contul administratorului conectat.
-        </p>
-        {canRunDemoCleanup ? (
-          <form action={cleanupFormAction} className="mt-3 space-y-3 rounded-xl border border-[var(--warning)]/50 bg-[rgba(44,19,2,0.35)] p-3">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--warning)]">Confirmare obligatorie</p>
-              <p className="text-xs text-[var(--warning)]/90">
-                Scrie exact <span className="font-semibold text-[var(--warning)]">{DEMO_CLEANUP_CONFIRM_TEXT}</span> pentru a executa curatarea.
-              </p>
-            </div>
-            <Input
-              name="confirmationText"
-              value={cleanupConfirmationText}
-              onChange={(event) => setCleanupConfirmationText(event.target.value)}
-              placeholder={DEMO_CLEANUP_CONFIRM_TEXT}
-              required
-            />
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                disabled={cleanupPending || cleanupConfirmationText.trim() !== DEMO_CLEANUP_CONFIRM_TEXT}
-                onClick={(event) => {
-                  if (!window.confirm("Confirmi eliminarea datelor demo/onboarding? Actiunea este ireversibila pentru datele hard-delete.")) {
-                    event.preventDefault();
-                  }
-                }}
-              >
-                {cleanupPending ? "Se curata..." : "Curata date demo"}
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <p className="mt-3 text-sm text-[var(--warning)]">
-            Doar rolurile SUPER_ADMIN si ADMINISTRATOR pot executa curatarea datelor demo.
-          </p>
-        )}
-      </section>
-    </div>
-  );
+			<section className="rounded-2xl border border-[var(--warning)]/60 bg-[rgba(88,45,12,0.16)] p-4">
+				<p className="text-[11px] uppercase tracking-[0.12em] text-[var(--warning)]">
+					Curatare demo / onboarding
+				</p>
+				<h2 className="mt-1 text-lg font-semibold text-[var(--warning)]">
+					Sterge datele boilerplate de seed
+				</h2>
+				<p className="mt-2 text-sm text-[var(--warning)]">
+					Actiunea curata doar inregistrarile demo identificate explicit in{" "}
+					<code>prisma/seed.ts</code>, fara a atinge metadata RBAC
+					(roluri/permisiuni) si fara a sterge contul administratorului
+					conectat.
+				</p>
+				{canRunDemoCleanup ? (
+					<form
+						action={cleanupFormAction}
+						className="mt-3 space-y-3 rounded-xl border border-[var(--warning)]/50 bg-[rgba(44,19,2,0.35)] p-3"
+					>
+						<div className="space-y-1">
+							<p className="text-xs uppercase tracking-[0.16em] text-[var(--warning)]">
+								Confirmare obligatorie
+							</p>
+							<p className="text-xs text-[var(--warning)]/90">
+								Scrie exact{" "}
+								<span className="font-semibold text-[var(--warning)]">
+									{DEMO_CLEANUP_CONFIRM_TEXT}
+								</span>{" "}
+								pentru a executa curatarea.
+							</p>
+						</div>
+						<Input
+							name="confirmationText"
+							value={cleanupConfirmationText}
+							onChange={(event) =>
+								setCleanupConfirmationText(event.target.value)
+							}
+							placeholder={DEMO_CLEANUP_CONFIRM_TEXT}
+							required
+						/>
+						<div className="flex justify-end">
+							<Button
+								type="submit"
+								variant="destructive"
+								size="sm"
+								disabled={
+									cleanupPending ||
+									cleanupConfirmationText.trim() !== DEMO_CLEANUP_CONFIRM_TEXT
+								}
+								onClick={(event) => {
+									if (
+										!window.confirm(
+											"Confirmi eliminarea datelor demo/onboarding? Actiunea este ireversibila pentru datele hard-delete.",
+										)
+									) {
+										event.preventDefault();
+									}
+								}}
+							>
+								{cleanupPending ? "Se curata..." : "Curata date demo"}
+							</Button>
+						</div>
+					</form>
+				) : (
+					<p className="mt-3 text-sm text-[var(--warning)]">
+						Doar rolurile SUPER_ADMIN si ADMINISTRATOR pot executa curatarea
+						datelor demo.
+					</p>
+				)}
+			</section>
+		</div>
+	);
 }

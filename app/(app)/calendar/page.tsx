@@ -1,221 +1,304 @@
 import dynamic from "next/dynamic";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
-import { FormModal } from "@/src/components/forms/form-modal";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
+import {
+	resolveAccessScope,
+	workOrderScopeWhere,
+} from "@/src/lib/access-scope";
 import { auth } from "@/src/lib/auth";
-import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
-import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
+import { hasPermission } from "@/src/lib/rbac";
 import { createCalendarTaskAction } from "./actions";
 
-const PlanningBoard = dynamic(() => import("./planning-board").then((module) => module.PlanningBoard), {
-  loading: () => (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-      {Array.from({ length: 7 }).map((_, index) => (
-        <div key={index} className="min-h-56 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3" />
-      ))}
-    </div>
-  ),
-});
+const PlanningBoard = dynamic(
+	() => import("./planning-board").then((module) => module.PlanningBoard),
+	{
+		loading: () => (
+			<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+				{Array.from({ length: 7 }).map((_, index) => (
+					<div
+						key={index}
+						className="min-h-56 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3"
+					/>
+				))}
+			</div>
+		),
+	},
+);
 
 export default async function CalendarPage({
-  searchParams,
+	searchParams,
 }: {
-  searchParams: Promise<{ projectId?: string; teamId?: string; q?: string }>;
+	searchParams: Promise<{ projectId?: string; teamId?: string; q?: string }>;
 }) {
-  const params = await searchParams;
-  const trimmedQuery = params.q?.trim() || "";
-  const session = await auth();
-  const scope = session?.user
-    ? await resolveAccessScope({
-        id: session.user.id,
-        email: session.user.email,
-        roleKeys: session.user.roleKeys || [],
-      })
-    : { projectIds: null, teamId: null };
-  const userContext = session?.user
-    ? { id: session.user.id, email: session.user.email, roleKeys: session.user.roleKeys || [] }
-    : { id: "", email: null, roleKeys: [] };
-  const canCreate = hasPermission(userContext.roleKeys || [], "TASKS", "CREATE", userContext.email);
-  const allowedProjectId =
-    params.projectId && (scope.projectIds === null || scope.projectIds.includes(params.projectId)) ? params.projectId : undefined;
-  const allowedTeamId = params.teamId && (!scope.teamId || scope.teamId === params.teamId) ? params.teamId : undefined;
+	const params = await searchParams;
+	const trimmedQuery = params.q?.trim() || "";
+	const session = await auth();
+	const scope = session?.user
+		? await resolveAccessScope({
+				id: session.user.id,
+				email: session.user.email,
+				roleKeys: session.user.roleKeys || [],
+			})
+		: { projectIds: null, teamId: null };
+	const userContext = session?.user
+		? {
+				id: session.user.id,
+				email: session.user.email,
+				roleKeys: session.user.roleKeys || [],
+			}
+		: { id: "", email: null, roleKeys: [] };
+	const canCreate = hasPermission(
+		userContext.roleKeys || [],
+		"TASKS",
+		"CREATE",
+		userContext.email,
+	);
+	const allowedProjectId =
+		params.projectId &&
+		(scope.projectIds === null || scope.projectIds.includes(params.projectId))
+			? params.projectId
+			: undefined;
+	const allowedTeamId =
+		params.teamId && (!scope.teamId || scope.teamId === params.teamId)
+			? params.teamId
+			: undefined;
 
-  const [projects, teams, workOrders] = await Promise.all([
-    prisma.project.findMany({
-      where: {
-        deletedAt: null,
-        ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
-      },
-      select: { id: true, title: true },
-      orderBy: [{ title: "asc" }, { id: "asc" }],
-    }),
-    prisma.team.findMany({
-      where: scope.teamId ? { deletedAt: null, isActive: true, id: scope.teamId } : { deletedAt: null, isActive: true },
-      select: { id: true, name: true },
-      orderBy: [{ name: "asc" }, { id: "asc" }],
-    }),
-    prisma.workOrder.findMany({
-      where: {
-        deletedAt: null,
-        ...workOrderScopeWhere(userContext, scope),
-        status: { not: "CANCELED" },
-        projectId: allowedProjectId,
-        teamId: allowedTeamId,
-        title: trimmedQuery ? { contains: trimmedQuery, mode: "insensitive" } : undefined,
-      },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        priority: true,
-        startDate: true,
-        dueDate: true,
-        responsibleId: true,
-        responsible: { select: { firstName: true, lastName: true } },
-        teamId: true,
-        project: { select: { title: true } },
-        team: { select: { name: true } },
-      },
-      orderBy: [{ startDate: "asc" }, { id: "asc" }],
-      take: 80,
-    }),
-  ]);
+	const [projects, teams, workOrders] = await Promise.all([
+		prisma.project.findMany({
+			where: {
+				deletedAt: null,
+				...(scope.projectIds === null
+					? {}
+					: {
+							id: {
+								in: scope.projectIds.length ? scope.projectIds : ["__none__"],
+							},
+						}),
+			},
+			select: { id: true, title: true },
+			orderBy: [{ title: "asc" }, { id: "asc" }],
+		}),
+		prisma.team.findMany({
+			where: scope.teamId
+				? { deletedAt: null, isActive: true, id: scope.teamId }
+				: { deletedAt: null, isActive: true },
+			select: { id: true, name: true },
+			orderBy: [{ name: "asc" }, { id: "asc" }],
+		}),
+		prisma.workOrder.findMany({
+			where: {
+				deletedAt: null,
+				...workOrderScopeWhere(userContext, scope),
+				status: { not: "CANCELED" },
+				projectId: allowedProjectId,
+				teamId: allowedTeamId,
+				title: trimmedQuery
+					? { contains: trimmedQuery, mode: "insensitive" }
+					: undefined,
+			},
+			select: {
+				id: true,
+				title: true,
+				status: true,
+				priority: true,
+				startDate: true,
+				dueDate: true,
+				responsibleId: true,
+				responsible: { select: { firstName: true, lastName: true } },
+				teamId: true,
+				project: { select: { title: true } },
+				team: { select: { name: true } },
+			},
+			orderBy: [{ startDate: "asc" }, { id: "asc" }],
+			take: 80,
+		}),
+	]);
 
-  const weekday = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
-  const tasks = workOrders.map((workOrder) => ({
-    id: workOrder.id,
-    title: workOrder.title,
-    project: workOrder.project.title,
-    team: workOrder.team?.name || "Nealocata",
-    teamId: workOrder.teamId,
-    responsibleId: workOrder.responsibleId,
-    responsible: workOrder.responsible ? `${workOrder.responsible.firstName} ${workOrder.responsible.lastName}` : null,
-    status: workOrder.status,
-    priority: workOrder.priority,
-    day: workOrder.startDate ? weekday[workOrder.startDate.getDay()] : "Luni",
-    startDateIso: workOrder.startDate?.toISOString() ?? null,
-    dueDateIso: workOrder.dueDate?.toISOString() ?? null,
-  }));
+	const weekday = [
+		"Duminica",
+		"Luni",
+		"Marti",
+		"Miercuri",
+		"Joi",
+		"Vineri",
+		"Sambata",
+	];
+	const tasks = workOrders.map((workOrder) => ({
+		id: workOrder.id,
+		title: workOrder.title,
+		project: workOrder.project.title,
+		team: workOrder.team?.name || "Nealocata",
+		teamId: workOrder.teamId,
+		responsibleId: workOrder.responsibleId,
+		responsible: workOrder.responsible
+			? `${workOrder.responsible.firstName} ${workOrder.responsible.lastName}`
+			: null,
+		status: workOrder.status,
+		priority: workOrder.priority,
+		day: workOrder.startDate ? weekday[workOrder.startDate.getDay()] : "Luni",
+		startDateIso: workOrder.startDate?.toISOString() ?? null,
+		dueDateIso: workOrder.dueDate?.toISOString() ?? null,
+	}));
 
-  return (
-    <PermissionGuard resource="TASKS" action="VIEW">
-      <div className="page-stack">
-        <PageHeader title="Calendar operational" subtitle="Planificare saptamanala cu detectie conflicte si reprogramare directa" />
-        <Card className="space-y-4">
-          <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Input name="q" placeholder="Cauta lucrare" defaultValue={trimmedQuery} />
-            <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]">
-              <option value="">Toate proiectele</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-            <select name="teamId" defaultValue={params.teamId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]">
-              <option value="">Toate echipele</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary">
-              Filtreaza
-            </Button>
-          </form>
+	return (
+		<PermissionGuard resource="TASKS" action="VIEW">
+			<div className="page-stack">
+				<PageHeader
+					title="Calendar operational"
+					subtitle="Planificare saptamanala cu detectie conflicte si reprogramare directa"
+				/>
+				<Card className="space-y-4">
+					<form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+						<Input
+							name="q"
+							placeholder="Cauta lucrare"
+							defaultValue={trimmedQuery}
+						/>
+						<select
+							name="projectId"
+							defaultValue={params.projectId || ""}
+							className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
+						>
+							<option value="">Toate proiectele</option>
+							{projects.map((project) => (
+								<option key={project.id} value={project.id}>
+									{project.title}
+								</option>
+							))}
+						</select>
+						<select
+							name="teamId"
+							defaultValue={params.teamId || ""}
+							className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
+						>
+							<option value="">Toate echipele</option>
+							{teams.map((team) => (
+								<option key={team.id} value={team.id}>
+									{team.name}
+								</option>
+							))}
+						</select>
+						<Button type="submit" variant="secondary">
+							Filtreaza
+						</Button>
+					</form>
 
-          {canCreate ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-[var(--muted)]">
-                  Creeaza lucrari noi din dialog fara sa pierzi vizibilitatea planificarii curente.
-                </p>
-                <FormModal
-                  triggerLabel="Creeaza lucrare in calendar"
-                  title="Lucrare noua in calendar"
-                  description="Seteaza proiectul, echipa si ziua de inceput."
-                >
-                  <form action={createCalendarTaskAction} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                      <span>Titlu lucrare</span>
-                      <Input name="title" placeholder="Ex: Montaj tablou electric" required />
-                    </label>
-                    <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                      <span>Proiect</span>
-                      <select
-                        name="projectId"
-                        required
-                        defaultValue=""
-                        disabled={projects.length === 0}
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
-                      >
-                        <option value="" disabled>
-                          Selecteaza proiectul
-                        </option>
-                        {projects.map((project) => (
-                          <option key={project.id} value={project.id}>
-                            {project.title}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                      <span>Echipa</span>
-                      <select
-                        name="teamId"
-                        defaultValue=""
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
-                      >
-                        <option value="">Fara echipa / de completat ulterior</option>
-                        {teams.map((team) => (
-                          <option key={team.id} value={team.id}>
-                            {team.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                      <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                        <span>Zi de inceput</span>
-                        <select
-                          name="dayLabel"
-                          defaultValue="Luni"
-                          className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
-                        >
-                          {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
-                            <option key={day} value={day}>
-                              {day}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <Button type="submit" className="h-10 w-full sm:w-auto" disabled={projects.length === 0}>
-                        Creeaza si plaseaza
-                      </Button>
-                    </div>
-                    <p className="sm:col-span-2 xl:col-span-4 text-[11px] leading-5 text-[var(--muted)]">
-                      Lucrarea va porni automat la 08:00 si va primi termen la 17:00 in ziua selectata. Daca ramane fara responsabil sau
-                      depaseste termenul, cardul va afisa avertismente explicite.
-                    </p>
-                  </form>
-                </FormModal>
-              </div>
-            </div>
-          ) : null}
+					{canCreate ? (
+						<div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<p className="text-sm text-[var(--muted)]">
+									Creeaza lucrari noi din dialog fara sa pierzi vizibilitatea
+									planificarii curente.
+								</p>
+								<FormModal
+									triggerLabel="Creeaza lucrare in calendar"
+									title="Lucrare noua in calendar"
+									description="Seteaza proiectul, echipa si ziua de inceput."
+								>
+									<form
+										action={createCalendarTaskAction}
+										className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+									>
+										<label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+											<span>Titlu lucrare</span>
+											<Input
+												name="title"
+												placeholder="Ex: Montaj tablou electric"
+												required
+											/>
+										</label>
+										<label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+											<span>Proiect</span>
+											<select
+												name="projectId"
+												required
+												defaultValue=""
+												disabled={projects.length === 0}
+												className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
+											>
+												<option value="" disabled>
+													Selecteaza proiectul
+												</option>
+												{projects.map((project) => (
+													<option key={project.id} value={project.id}>
+														{project.title}
+													</option>
+												))}
+											</select>
+										</label>
+										<label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+											<span>Echipa</span>
+											<select
+												name="teamId"
+												defaultValue=""
+												className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
+											>
+												<option value="">
+													Fara echipa / de completat ulterior
+												</option>
+												{teams.map((team) => (
+													<option key={team.id} value={team.id}>
+														{team.name}
+													</option>
+												))}
+											</select>
+										</label>
+										<div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+											<label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+												<span>Zi de inceput</span>
+												<select
+													name="dayLabel"
+													defaultValue="Luni"
+													className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm text-[var(--muted-strong)]"
+												>
+													{[
+														"Luni",
+														"Marti",
+														"Miercuri",
+														"Joi",
+														"Vineri",
+														"Sambata",
+														"Duminica",
+													].map((day) => (
+														<option key={day} value={day}>
+															{day}
+														</option>
+													))}
+												</select>
+											</label>
+											<Button
+												type="submit"
+												className="h-10 w-full sm:w-auto"
+												disabled={projects.length === 0}
+											>
+												Creeaza si plaseaza
+											</Button>
+										</div>
+										<p className="sm:col-span-2 xl:col-span-4 text-[11px] leading-5 text-[var(--muted)]">
+											Lucrarea va porni automat la 08:00 si va primi termen la
+											17:00 in ziua selectata. Daca ramane fara responsabil sau
+											depaseste termenul, cardul va afisa avertismente
+											explicite.
+										</p>
+									</form>
+								</FormModal>
+							</div>
+						</div>
+					) : null}
 
-          {tasks.length === 0 ? (
-            <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--muted)]">
-              Nu exista lucrari in calendar pentru filtrele curente.
-            </p>
-          ) : null}
-          <PlanningBoard initialTasks={tasks} />
-        </Card>
-      </div>
-    </PermissionGuard>
-  );
+					{tasks.length === 0 ? (
+						<p className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--muted)]">
+							Nu exista lucrari in calendar pentru filtrele curente.
+						</p>
+					) : null}
+					<PlanningBoard initialTasks={tasks} />
+				</Card>
+			</div>
+		</PermissionGuard>
+	);
 }

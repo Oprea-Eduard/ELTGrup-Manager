@@ -1,647 +1,742 @@
 "use server";
 
-import { MaterialRequestStatus, NotificationType, RoleKey, StockMovementType } from "@prisma/client";
+import {
+	MaterialRequestStatus,
+	NotificationType,
+	RoleKey,
+	StockMovementType,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { assertProjectAccess, resolveAccessScope } from "@/src/lib/access-scope";
+import {
+	assertProjectAccess,
+	resolveAccessScope,
+} from "@/src/lib/access-scope";
+import { type ActionState, fromZodError } from "@/src/lib/action-state";
 import { logActivity } from "@/src/lib/activity-log";
-import { ActionState, fromZodError } from "@/src/lib/action-state";
+import { calculateAvailableStock } from "@/src/lib/inventory";
 import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { uploadDocumentFile } from "@/src/lib/storage";
-import { calculateAvailableStock } from "@/src/lib/inventory";
 
 const requestSchema = z.object({
-  projectId: z.string().cuid(),
-  materialId: z.string().cuid(),
-  quantity: z.coerce.number().positive(),
-  note: z.string().trim().max(500).optional(),
+	projectId: z.string().cuid(),
+	materialId: z.string().cuid(),
+	quantity: z.coerce.number().positive(),
+	note: z.string().trim().max(500).optional(),
 });
 
 const movementSchema = z.object({
-  materialId: z.string().cuid(),
-  warehouseId: z.string().cuid(),
-  projectId: z.string().cuid().optional(),
-  quantity: z.coerce.number().positive(),
-  type: z.nativeEnum(StockMovementType),
-  note: z.string().trim().max(500).optional(),
+	materialId: z.string().cuid(),
+	warehouseId: z.string().cuid(),
+	projectId: z.string().cuid().optional(),
+	quantity: z.coerce.number().positive(),
+	type: z.nativeEnum(StockMovementType),
+	note: z.string().trim().max(500).optional(),
 });
 
 const approveAndIssueSchema = z.object({
-  id: z.string().cuid(),
-  warehouseId: z.string().cuid(),
+	id: z.string().cuid(),
+	warehouseId: z.string().cuid(),
 });
 const updateMaterialRequestStatusSchema = z.object({
-  id: z.string().cuid(),
-  status: z.nativeEnum(MaterialRequestStatus),
+	id: z.string().cuid(),
+	status: z.nativeEnum(MaterialRequestStatus),
 });
 
 const createMaterialSchema = z.object({
-  code: z.string().trim().min(2),
-  name: z.string().trim().min(2),
-  unitOfMeasure: z.string().trim().min(1),
-  category: z.string().trim().optional(),
-  internalCost: z.coerce.number().min(0).optional(),
-  minStockLevel: z.coerce.number().min(0).optional(),
-  supplierName: z.string().trim().optional(),
+	code: z.string().trim().min(2),
+	name: z.string().trim().min(2),
+	unitOfMeasure: z.string().trim().min(1),
+	category: z.string().trim().optional(),
+	internalCost: z.coerce.number().min(0).optional(),
+	minStockLevel: z.coerce.number().min(0).optional(),
+	supplierName: z.string().trim().optional(),
 });
 
 const stockAndInvoiceAllowedRoles = new Set<RoleKey>([
-  RoleKey.SUPER_ADMIN,
-  RoleKey.ADMINISTRATOR,
-  RoleKey.MAGAZIONER,
-  RoleKey.SITE_MANAGER,
-  RoleKey.ACCOUNTANT,
+	RoleKey.SUPER_ADMIN,
+	RoleKey.ADMINISTRATOR,
+	RoleKey.MAGAZIONER,
+	RoleKey.SITE_MANAGER,
+	RoleKey.ACCOUNTANT,
 ]);
 const incomingStockTypes: StockMovementType[] = [
-  StockMovementType.IN,
-  StockMovementType.TRANSFER,
-  StockMovementType.RETURN,
-  StockMovementType.ADJUSTMENT,
+	StockMovementType.IN,
+	StockMovementType.TRANSFER,
+	StockMovementType.RETURN,
+	StockMovementType.ADJUSTMENT,
 ];
-const outgoingStockTypes: StockMovementType[] = [StockMovementType.OUT, StockMovementType.WASTE];
+const outgoingStockTypes: StockMovementType[] = [
+	StockMovementType.OUT,
+	StockMovementType.WASTE,
+];
 
 function ensureStockAndInvoiceAccess(roleKeys: RoleKey[]) {
-  if (roleKeys.some((role) => stockAndInvoiceAllowedRoles.has(role))) return;
-  throw new Error("Doar Admin, Sef Santier sau Financiar pot gestiona stocurile si facturile materialelor.");
+	if (roleKeys.some((role) => stockAndInvoiceAllowedRoles.has(role))) return;
+	throw new Error(
+		"Doar Admin, Sef Santier sau Financiar pot gestiona stocurile si facturile materialelor.",
+	);
 }
 
-async function getAvailableWarehouseStock(materialId: string, warehouseId: string) {
-  const [incomingStock, outgoingStock] = await Promise.all([
-    prisma.stockMovement.aggregate({
-      where: {
-        materialId,
-        warehouseId,
-        type: { in: incomingStockTypes },
-      },
-      _sum: { quantity: true },
-    }),
-    prisma.stockMovement.aggregate({
-      where: {
-        materialId,
-        warehouseId,
-        type: { in: outgoingStockTypes },
-      },
-      _sum: { quantity: true },
-    }),
-  ]);
+async function getAvailableWarehouseStock(
+	materialId: string,
+	warehouseId: string,
+) {
+	const [incomingStock, outgoingStock] = await Promise.all([
+		prisma.stockMovement.aggregate({
+			where: {
+				materialId,
+				warehouseId,
+				type: { in: incomingStockTypes },
+			},
+			_sum: { quantity: true },
+		}),
+		prisma.stockMovement.aggregate({
+			where: {
+				materialId,
+				warehouseId,
+				type: { in: outgoingStockTypes },
+			},
+			_sum: { quantity: true },
+		}),
+	]);
 
-  return calculateAvailableStock(
-    Number(incomingStock._sum?.quantity || 0),
-    Number(outgoingStock._sum?.quantity || 0),
-  );
+	return calculateAvailableStock(
+		Number(incomingStock._sum?.quantity || 0),
+		Number(outgoingStock._sum?.quantity || 0),
+	);
 }
 
 async function createMaterialRequestInternal(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "CREATE");
+	const currentUser = await requirePermission("MATERIALS", "CREATE");
 
-  const parsed = requestSchema.safeParse({
-    projectId: formData.get("projectId"),
-    materialId: formData.get("materialId"),
-    quantity: formData.get("quantity"),
-    note: formData.get("note") || undefined,
-  });
+	const parsed = requestSchema.safeParse({
+		projectId: formData.get("projectId"),
+		materialId: formData.get("materialId"),
+		quantity: formData.get("quantity"),
+		note: formData.get("note") || undefined,
+	});
 
-  if (!parsed.success) throw parsed.error;
-  await assertProjectAccess(currentUser, parsed.data.projectId);
+	if (!parsed.success) throw parsed.error;
+	await assertProjectAccess(currentUser, parsed.data.projectId);
 
-  const request = await prisma.materialRequest.create({
-    data: {
-      projectId: parsed.data.projectId,
-      materialId: parsed.data.materialId,
-      quantity: parsed.data.quantity,
-      note: parsed.data.note,
-      requestedById: currentUser.id,
-    },
-    include: { material: true, project: true },
-  });
+	const request = await prisma.materialRequest.create({
+		data: {
+			projectId: parsed.data.projectId,
+			materialId: parsed.data.materialId,
+			quantity: parsed.data.quantity,
+			note: parsed.data.note,
+			requestedById: currentUser.id,
+		},
+		include: { material: true, project: true },
+	});
 
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "MATERIAL_REQUEST",
-    entityId: request.id,
-    action: "MATERIAL_REQUEST_CREATED",
-    diff: { quantity: request.quantity.toString(), projectId: request.projectId },
-  });
+	await logActivity({
+		userId: currentUser.id,
+		entityType: "MATERIAL_REQUEST",
+		entityId: request.id,
+		action: "MATERIAL_REQUEST_CREATED",
+		diff: {
+			quantity: request.quantity.toString(),
+			projectId: request.projectId,
+		},
+	});
 
-  await notifyRoles({
-    roleKeys: [RoleKey.SITE_MANAGER, RoleKey.PROJECT_MANAGER, RoleKey.BACKOFFICE],
-    type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
-    title: "Cerere materiale de aprobat",
-    message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
-    actionUrl: "/materiale",
-  });
+	await notifyRoles({
+		roleKeys: [
+			RoleKey.SITE_MANAGER,
+			RoleKey.PROJECT_MANAGER,
+			RoleKey.BACKOFFICE,
+		],
+		type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
+		title: "Cerere materiale de aprobat",
+		message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
+		actionUrl: "/materiale",
+	});
 
-  revalidatePath("/materiale");
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	revalidatePath("/panou");
 }
 
 export async function createMaterialRequestAction(
-  _: ActionState,
-  formData: FormData,
+	_: ActionState,
+	formData: FormData,
 ): Promise<ActionState> {
-  try {
-    await createMaterialRequestInternal(formData);
-    return { ok: true, message: "Cererea a ajuns la aprobare." };
-  } catch (error) {
-    if (error instanceof z.ZodError) return fromZodError(error);
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare cerere materiale" };
-  }
+	try {
+		await createMaterialRequestInternal(formData);
+		return { ok: true, message: "Cererea a ajuns la aprobare." };
+	} catch (error) {
+		if (error instanceof z.ZodError) return fromZodError(error);
+		return {
+			ok: false,
+			message:
+				error instanceof Error
+					? error.message
+					: "Eroare la creare cerere materiale",
+		};
+	}
 }
 
 export async function approveMaterialRequest(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "APPROVE");
+	const currentUser = await requirePermission("MATERIALS", "APPROVE");
 
-  const parsed = updateMaterialRequestStatusSchema.safeParse({
-    id: formData.get("id"),
-    status: formData.get("status"),
-  });
-  if (!parsed.success) {
-    throw new Error("Starea cererii este invalida.");
-  }
-  const allowedStatuses: MaterialRequestStatus[] = [MaterialRequestStatus.APPROVED, MaterialRequestStatus.REJECTED];
-  if (!allowedStatuses.includes(parsed.data.status)) {
-    throw new Error("Status invalid");
-  }
+	const parsed = updateMaterialRequestStatusSchema.safeParse({
+		id: formData.get("id"),
+		status: formData.get("status"),
+	});
+	if (!parsed.success) {
+		throw new Error("Starea cererii este invalida.");
+	}
+	const allowedStatuses: MaterialRequestStatus[] = [
+		MaterialRequestStatus.APPROVED,
+		MaterialRequestStatus.REJECTED,
+	];
+	if (!allowedStatuses.includes(parsed.data.status)) {
+		throw new Error("Status invalid");
+	}
 
-  const current = await prisma.materialRequest.findUnique({
-    where: { id: parsed.data.id },
-    select: { projectId: true, status: true },
-  });
-  if (!current) throw new Error("Cerere inexistenta.");
-  await assertProjectAccess(currentUser, current.projectId);
-  if (current.status !== MaterialRequestStatus.PENDING) {
-    throw new Error("Doar cererile in asteptare pot fi aprobate sau respinse.");
-  }
+	const current = await prisma.materialRequest.findUnique({
+		where: { id: parsed.data.id },
+		select: { projectId: true, status: true },
+	});
+	if (!current) throw new Error("Cerere inexistenta.");
+	await assertProjectAccess(currentUser, current.projectId);
+	if (current.status !== MaterialRequestStatus.PENDING) {
+		throw new Error("Doar cererile in asteptare pot fi aprobate sau respinse.");
+	}
 
-  const request = await prisma.materialRequest.update({
-    where: { id: parsed.data.id },
-    data: {
-      status: parsed.data.status,
-      approvedAt: new Date(),
-      approvedById: currentUser.id,
-    },
-    include: { requestedBy: true, material: { select: { name: true } }, project: { select: { title: true } } },
-  });
+	const request = await prisma.materialRequest.update({
+		where: { id: parsed.data.id },
+		data: {
+			status: parsed.data.status,
+			approvedAt: new Date(),
+			approvedById: currentUser.id,
+		},
+		include: {
+			requestedBy: true,
+			material: { select: { name: true } },
+			project: { select: { title: true } },
+		},
+	});
 
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "MATERIAL_REQUEST",
-    entityId: parsed.data.id,
-    action: "MATERIAL_REQUEST_STATUS_UPDATED",
-    diff: { status: parsed.data.status },
-  });
+	await logActivity({
+		userId: currentUser.id,
+		entityType: "MATERIAL_REQUEST",
+		entityId: parsed.data.id,
+		action: "MATERIAL_REQUEST_STATUS_UPDATED",
+		diff: { status: parsed.data.status },
+	});
 
-  await notifyUser({
-    userId: request.requestedById,
-    type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
-    title:
-      parsed.data.status === MaterialRequestStatus.APPROVED
-        ? "Cerere materiale aprobata"
-        : "Cerere materiale respinsa",
-    message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
-    actionUrl: "/materiale",
-  });
+	await notifyUser({
+		userId: request.requestedById,
+		type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
+		title:
+			parsed.data.status === MaterialRequestStatus.APPROVED
+				? "Cerere materiale aprobata"
+				: "Cerere materiale respinsa",
+		message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
+		actionUrl: "/materiale",
+	});
 
-  revalidatePath("/materiale");
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	revalidatePath("/panou");
 }
 
 export async function approveAndIssueMaterialRequest(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "APPROVE");
-  ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
-  const parsed = approveAndIssueSchema.safeParse({
-    id: formData.get("id"),
-    warehouseId: formData.get("warehouseId"),
-  });
-  if (!parsed.success) throw new Error("Date invalide pentru aprobare cu emitere din stoc.");
+	const currentUser = await requirePermission("MATERIALS", "APPROVE");
+	ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
+	const parsed = approveAndIssueSchema.safeParse({
+		id: formData.get("id"),
+		warehouseId: formData.get("warehouseId"),
+	});
+	if (!parsed.success)
+		throw new Error("Date invalide pentru aprobare cu emitere din stoc.");
 
-  const request = await prisma.materialRequest.findUnique({
-    where: { id: parsed.data.id },
-    include: {
-      material: { select: { name: true, internalCost: true } },
-      requestedBy: { select: { id: true } },
-      project: { select: { title: true } },
-    },
-  });
-  if (!request) throw new Error("Cerere inexistenta.");
-  await assertProjectAccess(currentUser, request.projectId);
+	const request = await prisma.materialRequest.findUnique({
+		where: { id: parsed.data.id },
+		include: {
+			material: { select: { name: true, internalCost: true } },
+			requestedBy: { select: { id: true } },
+			project: { select: { title: true } },
+		},
+	});
+	if (!request) throw new Error("Cerere inexistenta.");
+	await assertProjectAccess(currentUser, request.projectId);
 
-  if (request.status !== MaterialRequestStatus.PENDING) {
-    throw new Error("Doar cererile in asteptare pot fi aprobate cu emitere din stoc.");
-  }
+	if (request.status !== MaterialRequestStatus.PENDING) {
+		throw new Error(
+			"Doar cererile in asteptare pot fi aprobate cu emitere din stoc.",
+		);
+	}
 
-  const existingIssuance = await prisma.stockMovement.findFirst({
-    where: {
-      materialId: request.materialId,
-      warehouseId: parsed.data.warehouseId,
-      type: StockMovementType.OUT,
-      documentRef: `MATERIAL_REQUEST:${request.id}`,
-    },
-    select: { id: true },
-  });
-  if (existingIssuance) {
-    throw new Error("Cererea are deja o emitere de stoc inregistrata.");
-  }
+	const existingIssuance = await prisma.stockMovement.findFirst({
+		where: {
+			materialId: request.materialId,
+			warehouseId: parsed.data.warehouseId,
+			type: StockMovementType.OUT,
+			documentRef: `MATERIAL_REQUEST:${request.id}`,
+		},
+		select: { id: true },
+	});
+	if (existingIssuance) {
+		throw new Error("Cererea are deja o emitere de stoc inregistrata.");
+	}
 
-  const availableStock = await getAvailableWarehouseStock(request.materialId, parsed.data.warehouseId);
-  const requestedQty = Number(request.quantity);
-  if (availableStock < requestedQty) {
-    throw new Error(`Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${requestedQty.toFixed(2)}).`);
-  }
+	const availableStock = await getAvailableWarehouseStock(
+		request.materialId,
+		parsed.data.warehouseId,
+	);
+	const requestedQty = Number(request.quantity);
+	if (availableStock < requestedQty) {
+		throw new Error(
+			`Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${requestedQty.toFixed(2)}).`,
+		);
+	}
 
-  const now = new Date();
-  await prisma.$transaction(async (tx) => {
-    await tx.materialRequest.update({
-      where: { id: request.id },
-      data: { status: MaterialRequestStatus.ISSUED, approvedAt: now, approvedById: currentUser.id },
-    });
+	const now = new Date();
+	await prisma.$transaction(async (tx) => {
+		await tx.materialRequest.update({
+			where: { id: request.id },
+			data: {
+				status: MaterialRequestStatus.ISSUED,
+				approvedAt: now,
+				approvedById: currentUser.id,
+			},
+		});
 
-    const movement = await tx.stockMovement.create({
-      data: {
-        materialId: request.materialId,
-        warehouseId: parsed.data.warehouseId,
-        projectId: request.projectId,
-        type: StockMovementType.OUT,
-        quantity: request.quantity,
-        note: `Emitere automata din cererea ${request.id}`,
-        documentRef: `MATERIAL_REQUEST:${request.id}`,
-      },
-    });
+		const movement = await tx.stockMovement.create({
+			data: {
+				materialId: request.materialId,
+				warehouseId: parsed.data.warehouseId,
+				projectId: request.projectId,
+				type: StockMovementType.OUT,
+				quantity: request.quantity,
+				note: `Emitere automata din cererea ${request.id}`,
+				documentRef: `MATERIAL_REQUEST:${request.id}`,
+			},
+		});
 
-    await tx.projectMaterialUsage.create({
-      data: {
-        projectId: request.projectId,
-        materialId: request.materialId,
-        quantityUsed: requestedQty,
-        quantityIssued: requestedQty,
-        note: `Consum din cerere materiale #${request.id}`,
-      },
-    });
+		await tx.projectMaterialUsage.create({
+			data: {
+				projectId: request.projectId,
+				materialId: request.materialId,
+				quantityUsed: requestedQty,
+				quantityIssued: requestedQty,
+				note: `Consum din cerere materiale #${request.id}`,
+			},
+		});
 
-    await tx.costEntry.create({
-      data: {
-        projectId: request.projectId,
-        type: "MATERIAL",
-        description: `Consum material ${request.material.name} din cererea #${request.id}`,
-        amount: requestedQty * Number(request.material.internalCost || 0),
-        occurredAt: now,
-        approvedById: currentUser.id,
-      },
-    });
+		await tx.costEntry.create({
+			data: {
+				projectId: request.projectId,
+				type: "MATERIAL",
+				description: `Consum material ${request.material.name} din cererea #${request.id}`,
+				amount: requestedQty * Number(request.material.internalCost || 0),
+				occurredAt: now,
+				approvedById: currentUser.id,
+			},
+		});
 
-    await tx.activityLog.create({
-      data: {
-        userId: currentUser.id,
-        entityType: "MATERIAL_REQUEST",
-        entityId: request.id,
-        action: "MATERIAL_REQUEST_APPROVED_AND_ISSUED",
-        diff: {
-          warehouseId: parsed.data.warehouseId,
-          stockMovementId: movement.id,
-          quantity: request.quantity.toString(),
-          projectId: request.projectId,
-        },
-      },
-    });
-  });
+		await tx.activityLog.create({
+			data: {
+				userId: currentUser.id,
+				entityType: "MATERIAL_REQUEST",
+				entityId: request.id,
+				action: "MATERIAL_REQUEST_APPROVED_AND_ISSUED",
+				diff: {
+					warehouseId: parsed.data.warehouseId,
+					stockMovementId: movement.id,
+					quantity: request.quantity.toString(),
+					projectId: request.projectId,
+				},
+			},
+		});
+	});
 
-  await notifyUser({
-    userId: request.requestedBy.id,
-    type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
-    title: "Cerere aprobata si eliberata din depozit",
-    message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
-    actionUrl: "/materiale",
-  });
+	await notifyUser({
+		userId: request.requestedBy.id,
+		type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
+		title: "Cerere aprobata si eliberata din depozit",
+		message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
+		actionUrl: "/materiale",
+	});
 
-  revalidatePath("/materiale");
-  revalidatePath("/financiar");
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	revalidatePath("/financiar");
+	revalidatePath("/proiecte");
+	revalidatePath("/panou");
 }
 
 async function createStockMovementInternal(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "UPDATE");
-  ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
+	const currentUser = await requirePermission("MATERIALS", "UPDATE");
+	ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
 
-  const parsed = movementSchema.safeParse({
-    materialId: formData.get("materialId"),
-    warehouseId: formData.get("warehouseId"),
-    projectId: formData.get("projectId") || undefined,
-    quantity: formData.get("quantity"),
-    type: formData.get("type"),
-    note: formData.get("note") || undefined,
-  });
+	const parsed = movementSchema.safeParse({
+		materialId: formData.get("materialId"),
+		warehouseId: formData.get("warehouseId"),
+		projectId: formData.get("projectId") || undefined,
+		quantity: formData.get("quantity"),
+		type: formData.get("type"),
+		note: formData.get("note") || undefined,
+	});
 
-  if (!parsed.success) throw parsed.error;
-  if (parsed.data.projectId) {
-    await assertProjectAccess(currentUser, parsed.data.projectId);
-  }
-  if (parsed.data.type === StockMovementType.OUT || parsed.data.type === StockMovementType.WASTE) {
-    const availableStock = await getAvailableWarehouseStock(parsed.data.materialId, parsed.data.warehouseId);
-    if (availableStock < parsed.data.quantity) {
-      throw new Error(
-        `Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${parsed.data.quantity.toFixed(2)}).`,
-      );
-    }
-  }
+	if (!parsed.success) throw parsed.error;
+	if (parsed.data.projectId) {
+		await assertProjectAccess(currentUser, parsed.data.projectId);
+	}
+	if (
+		parsed.data.type === StockMovementType.OUT ||
+		parsed.data.type === StockMovementType.WASTE
+	) {
+		const availableStock = await getAvailableWarehouseStock(
+			parsed.data.materialId,
+			parsed.data.warehouseId,
+		);
+		if (availableStock < parsed.data.quantity) {
+			throw new Error(
+				`Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${parsed.data.quantity.toFixed(2)}).`,
+			);
+		}
+	}
 
-  const isProjectLinkedConsumption =
-    Boolean(parsed.data.projectId) && (parsed.data.type === StockMovementType.OUT || parsed.data.type === StockMovementType.WASTE);
+	const isProjectLinkedConsumption =
+		Boolean(parsed.data.projectId) &&
+		(parsed.data.type === StockMovementType.OUT ||
+			parsed.data.type === StockMovementType.WASTE);
 
-  const movement = isProjectLinkedConsumption
-    ? await prisma.$transaction(async (tx) => {
-        const material = await tx.material.findUnique({
-          where: { id: parsed.data.materialId },
-          select: { internalCost: true, name: true },
-        });
-        const createdMovement = await tx.stockMovement.create({
-          data: {
-            materialId: parsed.data.materialId,
-            warehouseId: parsed.data.warehouseId,
-            projectId: parsed.data.projectId,
-            quantity: parsed.data.quantity,
-            type: parsed.data.type,
-            note: parsed.data.note,
-          },
-        });
+	const movement = isProjectLinkedConsumption
+		? await prisma.$transaction(async (tx) => {
+				const material = await tx.material.findUnique({
+					where: { id: parsed.data.materialId },
+					select: { internalCost: true, name: true },
+				});
+				const createdMovement = await tx.stockMovement.create({
+					data: {
+						materialId: parsed.data.materialId,
+						warehouseId: parsed.data.warehouseId,
+						projectId: parsed.data.projectId,
+						quantity: parsed.data.quantity,
+						type: parsed.data.type,
+						note: parsed.data.note,
+					},
+				});
 
-        const unitCost = Number(material?.internalCost || 0);
-        const quantity = Number(createdMovement.quantity);
-        const amount = unitCost * quantity;
+				const unitCost = Number(material?.internalCost || 0);
+				const quantity = Number(createdMovement.quantity);
+				const amount = unitCost * quantity;
 
-        await tx.projectMaterialUsage.create({
-          data: {
-            projectId: createdMovement.projectId as string,
-            materialId: createdMovement.materialId,
-            quantityUsed: quantity,
-            quantityIssued: createdMovement.type === StockMovementType.OUT ? quantity : 0,
-            note: `Miscare stoc #${createdMovement.id}`,
-          },
-        });
+				await tx.projectMaterialUsage.create({
+					data: {
+						projectId: createdMovement.projectId as string,
+						materialId: createdMovement.materialId,
+						quantityUsed: quantity,
+						quantityIssued:
+							createdMovement.type === StockMovementType.OUT ? quantity : 0,
+						note: `Miscare stoc #${createdMovement.id}`,
+					},
+				});
 
-        await tx.costEntry.create({
-          data: {
-            projectId: createdMovement.projectId as string,
-            type: "MATERIAL",
-            description: `Consum material ${material?.name || createdMovement.materialId} (#${createdMovement.id})`,
-            amount,
-            occurredAt: createdMovement.movedAt,
-            approvedById: currentUser.id,
-          },
-        });
+				await tx.costEntry.create({
+					data: {
+						projectId: createdMovement.projectId as string,
+						type: "MATERIAL",
+						description: `Consum material ${material?.name || createdMovement.materialId} (#${createdMovement.id})`,
+						amount,
+						occurredAt: createdMovement.movedAt,
+						approvedById: currentUser.id,
+					},
+				});
 
-        return createdMovement;
-      })
-    : await prisma.stockMovement.create({
-        data: {
-          materialId: parsed.data.materialId,
-          warehouseId: parsed.data.warehouseId,
-          projectId: parsed.data.projectId,
-          quantity: parsed.data.quantity,
-          type: parsed.data.type,
-          note: parsed.data.note,
-        },
-      });
+				return createdMovement;
+			})
+		: await prisma.stockMovement.create({
+				data: {
+					materialId: parsed.data.materialId,
+					warehouseId: parsed.data.warehouseId,
+					projectId: parsed.data.projectId,
+					quantity: parsed.data.quantity,
+					type: parsed.data.type,
+					note: parsed.data.note,
+				},
+			});
 
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "STOCK_MOVEMENT",
-    entityId: movement.id,
-    action: "STOCK_MOVEMENT_CREATED",
-    diff: { type: movement.type, quantity: movement.quantity.toString(), projectId: movement.projectId ?? null },
-  });
+	await logActivity({
+		userId: currentUser.id,
+		entityType: "STOCK_MOVEMENT",
+		entityId: movement.id,
+		action: "STOCK_MOVEMENT_CREATED",
+		diff: {
+			type: movement.type,
+			quantity: movement.quantity.toString(),
+			projectId: movement.projectId ?? null,
+		},
+	});
 
-  revalidatePath("/materiale");
-  if (movement.projectId && (movement.type === StockMovementType.OUT || movement.type === StockMovementType.WASTE)) {
-    revalidatePath("/financiar");
-    revalidatePath("/proiecte");
-  }
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	if (
+		movement.projectId &&
+		(movement.type === StockMovementType.OUT ||
+			movement.type === StockMovementType.WASTE)
+	) {
+		revalidatePath("/financiar");
+		revalidatePath("/proiecte");
+	}
+	revalidatePath("/panou");
 }
 
 export async function createStockMovementAction(
-  _: ActionState,
-  formData: FormData,
+	_: ActionState,
+	formData: FormData,
 ): Promise<ActionState> {
-  try {
-    await createStockMovementInternal(formData);
-    return { ok: true, message: "Miscarea de stoc a fost salvata." };
-  } catch (error) {
-    if (error instanceof z.ZodError) return fromZodError(error);
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la inregistrarea miscarii de stoc" };
-  }
+	try {
+		await createStockMovementInternal(formData);
+		return { ok: true, message: "Miscarea de stoc a fost salvata." };
+	} catch (error) {
+		if (error instanceof z.ZodError) return fromZodError(error);
+		return {
+			ok: false,
+			message:
+				error instanceof Error
+					? error.message
+					: "Eroare la inregistrarea miscarii de stoc",
+		};
+	}
 }
 
 export async function createMaterialAction(
-  _: ActionState,
-  formData: FormData,
+	_: ActionState,
+	formData: FormData,
 ): Promise<ActionState> {
-  try {
-    await requirePermission("MATERIALS", "CREATE");
+	try {
+		await requirePermission("MATERIALS", "CREATE");
 
-    const parsed = createMaterialSchema.safeParse({
-      code: formData.get("code"),
-      name: formData.get("name"),
-      unitOfMeasure: formData.get("unitOfMeasure"),
-      category: formData.get("category") || undefined,
-      internalCost: formData.get("internalCost") || undefined,
-      minStockLevel: formData.get("minStockLevel") || undefined,
-      supplierName: formData.get("supplierName") || undefined,
-    });
+		const parsed = createMaterialSchema.safeParse({
+			code: formData.get("code"),
+			name: formData.get("name"),
+			unitOfMeasure: formData.get("unitOfMeasure"),
+			category: formData.get("category") || undefined,
+			internalCost: formData.get("internalCost") || undefined,
+			minStockLevel: formData.get("minStockLevel") || undefined,
+			supplierName: formData.get("supplierName") || undefined,
+		});
 
-    if (!parsed.success) return fromZodError(parsed.error);
+		if (!parsed.success) return fromZodError(parsed.error);
 
-    await prisma.material.create({
-      data: {
-        code: parsed.data.code.toUpperCase(),
-        name: parsed.data.name,
-        unitOfMeasure: parsed.data.unitOfMeasure,
-        category: parsed.data.category,
-        internalCost: parsed.data.internalCost,
-        minStockLevel: parsed.data.minStockLevel,
-        supplierName: parsed.data.supplierName,
-      },
-    });
+		await prisma.material.create({
+			data: {
+				code: parsed.data.code.toUpperCase(),
+				name: parsed.data.name,
+				unitOfMeasure: parsed.data.unitOfMeasure,
+				category: parsed.data.category,
+				internalCost: parsed.data.internalCost,
+				minStockLevel: parsed.data.minStockLevel,
+				supplierName: parsed.data.supplierName,
+			},
+		});
 
-    revalidatePath("/materiale");
-    return { ok: true, message: "Material adaugat in catalog." };
-  } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare material" };
-  }
+		revalidatePath("/materiale");
+		return { ok: true, message: "Material adaugat in catalog." };
+	} catch (error) {
+		return {
+			ok: false,
+			message:
+				error instanceof Error ? error.message : "Eroare la creare material",
+		};
+	}
 }
 
 export async function uploadMaterialInvoiceAction(
-  _: ActionState,
-  formData: FormData,
+	_: ActionState,
+	formData: FormData,
 ): Promise<ActionState> {
-  try {
-    const currentUser = await requirePermission("MATERIALS", "CREATE");
-    ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
-    const projectId = (formData.get("projectId") || "").toString();
-    const invoiceNumber = (formData.get("invoiceNumber") || "").toString().trim();
-    const note = (formData.get("note") || "").toString().trim();
-    const file = formData.get("file");
+	try {
+		const currentUser = await requirePermission("MATERIALS", "CREATE");
+		ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
+		const projectId = (formData.get("projectId") || "").toString();
+		const invoiceNumber = (formData.get("invoiceNumber") || "")
+			.toString()
+			.trim();
+		const note = (formData.get("note") || "").toString().trim();
+		const file = formData.get("file");
 
-    if (!projectId) return { ok: false, message: "Proiectul este obligatoriu." };
-    if (!invoiceNumber) return { ok: false, message: "Numarul facturii este obligatoriu." };
-    if (!(file instanceof File)) return { ok: false, message: "Fisier lipsa." };
-    await assertProjectAccess(currentUser, projectId);
+		if (!projectId)
+			return { ok: false, message: "Proiectul este obligatoriu." };
+		if (!invoiceNumber)
+			return { ok: false, message: "Numarul facturii este obligatoriu." };
+		if (!(file instanceof File)) return { ok: false, message: "Fisier lipsa." };
+		await assertProjectAccess(currentUser, projectId);
 
-    const uploaded = await uploadDocumentFile(file);
-    await prisma.document.create({
-      data: {
-        category: "INVOICE",
-        title: `Factura materiale ${invoiceNumber}`,
-        fileName: uploaded.fileName,
-        storagePath: uploaded.storagePath,
-        mimeType: uploaded.mimeType,
-        projectId,
-        uploadedById: currentUser.id,
-        tags: ["material-invoice", invoiceNumber, note].filter(Boolean),
-      },
-    });
+		const uploaded = await uploadDocumentFile(file);
+		await prisma.document.create({
+			data: {
+				category: "INVOICE",
+				title: `Factura materiale ${invoiceNumber}`,
+				fileName: uploaded.fileName,
+				storagePath: uploaded.storagePath,
+				mimeType: uploaded.mimeType,
+				projectId,
+				uploadedById: currentUser.id,
+				tags: ["material-invoice", invoiceNumber, note].filter(Boolean),
+			},
+		});
 
-    revalidatePath("/materiale");
-    revalidatePath("/documente");
-    return { ok: true, message: "Factura de materiale a fost incarcata." };
-  } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la upload factura de materiale." };
-  }
+		revalidatePath("/materiale");
+		revalidatePath("/documente");
+		return { ok: true, message: "Factura de materiale a fost incarcata." };
+	} catch (error) {
+		return {
+			ok: false,
+			message:
+				error instanceof Error
+					? error.message
+					: "Eroare la upload factura de materiale.",
+		};
+	}
 }
 
 const bulkMaterialRequestSchema = z.object({
-  operation: z.enum(["APPROVE", "REJECT"]),
-  ids: z.array(z.string().cuid()).min(1),
+	operation: z.enum(["APPROVE", "REJECT"]),
+	ids: z.array(z.string().cuid()).min(1),
 });
 
 const archiveMaterialSchema = z.object({
-  id: z.string().cuid(),
+	id: z.string().cuid(),
 });
 
 const bulkMaterialSchema = z.object({
-  operation: z.enum(["ARCHIVE"]),
-  ids: z.array(z.string().cuid()).min(1),
+	operation: z.enum(["ARCHIVE"]),
+	ids: z.array(z.string().cuid()).min(1),
 });
 
 export async function archiveMaterial(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "DELETE");
-  const parsed = archiveMaterialSchema.safeParse({
-    id: formData.get("id"),
-  });
+	const currentUser = await requirePermission("MATERIALS", "DELETE");
+	const parsed = archiveMaterialSchema.safeParse({
+		id: formData.get("id"),
+	});
 
-  if (!parsed.success) {
-    throw new Error("Material invalid pentru arhivare.");
-  }
+	if (!parsed.success) {
+		throw new Error("Material invalid pentru arhivare.");
+	}
 
-  const material = await prisma.material.findUnique({
-    where: { id: parsed.data.id },
-    select: { id: true, name: true, deletedAt: true },
-  });
-  if (!material) {
-    throw new Error("Materialul selectat nu exista.");
-  }
-  if (material.deletedAt) {
-    throw new Error("Materialul este deja arhivat.");
-  }
+	const material = await prisma.material.findUnique({
+		where: { id: parsed.data.id },
+		select: { id: true, name: true, deletedAt: true },
+	});
+	if (!material) {
+		throw new Error("Materialul selectat nu exista.");
+	}
+	if (material.deletedAt) {
+		throw new Error("Materialul este deja arhivat.");
+	}
 
-  await prisma.material.update({
-    where: { id: parsed.data.id },
-    data: { deletedAt: new Date() },
-  });
+	await prisma.material.update({
+		where: { id: parsed.data.id },
+		data: { deletedAt: new Date() },
+	});
 
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "MATERIAL",
-    entityId: parsed.data.id,
-    action: "MATERIAL_ARCHIVED",
-    diff: { name: material.name },
-  });
+	await logActivity({
+		userId: currentUser.id,
+		entityType: "MATERIAL",
+		entityId: parsed.data.id,
+		action: "MATERIAL_ARCHIVED",
+		diff: { name: material.name },
+	});
 
-  revalidatePath("/materiale");
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	revalidatePath("/panou");
 }
 
 export async function bulkArchiveMaterialsAction(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "DELETE");
-  const operation = String(formData.get("operation") || "");
-  const ids = formData.getAll("ids").map(String).filter(Boolean);
-  const parsed = bulkMaterialSchema.safeParse({
-    operation,
-    ids,
-  });
-  if (!parsed.success) {
-    throw new Error("Selectie bulk invalida pentru materiale.");
-  }
+	const currentUser = await requirePermission("MATERIALS", "DELETE");
+	const operation = String(formData.get("operation") || "");
+	const ids = formData.getAll("ids").map(String).filter(Boolean);
+	const parsed = bulkMaterialSchema.safeParse({
+		operation,
+		ids,
+	});
+	if (!parsed.success) {
+		throw new Error("Selectie bulk invalida pentru materiale.");
+	}
 
-  const archivableMaterials = await prisma.material.findMany({
-    where: {
-      id: { in: parsed.data.ids },
-      deletedAt: null,
-    },
-    select: { id: true },
-  });
-  const archivableIds = archivableMaterials.map((material) => material.id);
-  if (archivableIds.length === 0) {
-    throw new Error("Materialele selectate sunt deja arhivate sau inexistente.");
-  }
+	const archivableMaterials = await prisma.material.findMany({
+		where: {
+			id: { in: parsed.data.ids },
+			deletedAt: null,
+		},
+		select: { id: true },
+	});
+	const archivableIds = archivableMaterials.map((material) => material.id);
+	if (archivableIds.length === 0) {
+		throw new Error(
+			"Materialele selectate sunt deja arhivate sau inexistente.",
+		);
+	}
 
-  const result = await prisma.material.updateMany({
-    where: {
-      id: { in: archivableIds },
-      deletedAt: null,
-    },
-    data: {
-      deletedAt: new Date(),
-    },
-  });
+	const result = await prisma.material.updateMany({
+		where: {
+			id: { in: archivableIds },
+			deletedAt: null,
+		},
+		data: {
+			deletedAt: new Date(),
+		},
+	});
 
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "MATERIAL_BULK",
-    entityId: "MULTI",
-    action: "MATERIALS_ARCHIVED_BULK",
-    diff: { ids: archivableIds, affectedRows: result.count },
-  });
+	await logActivity({
+		userId: currentUser.id,
+		entityType: "MATERIAL_BULK",
+		entityId: "MULTI",
+		action: "MATERIALS_ARCHIVED_BULK",
+		diff: { ids: archivableIds, affectedRows: result.count },
+	});
 
-  revalidatePath("/materiale");
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	revalidatePath("/panou");
 }
 
 export async function bulkMaterialRequestsAction(formData: FormData) {
-  const currentUser = await requirePermission("MATERIALS", "APPROVE");
-  const operation = String(formData.get("operation") || "");
-  const ids = formData.getAll("ids").map(String).filter(Boolean);
-  const parsed = bulkMaterialRequestSchema.safeParse({ operation, ids });
-  if (!parsed.success) throw new Error("Selectie bulk invalida pentru cereri materiale.");
+	const currentUser = await requirePermission("MATERIALS", "APPROVE");
+	const operation = String(formData.get("operation") || "");
+	const ids = formData.getAll("ids").map(String).filter(Boolean);
+	const parsed = bulkMaterialRequestSchema.safeParse({ operation, ids });
+	if (!parsed.success)
+		throw new Error("Selectie bulk invalida pentru cereri materiale.");
 
-  const scope = await resolveAccessScope(currentUser);
-  let scopedIds = parsed.data.ids;
-  if (scope.projectIds !== null) {
-    const allowed = await prisma.materialRequest.findMany({
-      where: { id: { in: parsed.data.ids }, projectId: { in: scope.projectIds } },
-      select: { id: true },
-    });
-    const allowedSet = new Set(allowed.map((row) => row.id));
-    scopedIds = parsed.data.ids.filter((id) => allowedSet.has(id));
-  }
-  if (scopedIds.length === 0) throw new Error("Nu ai acces la cererile selectate.");
+	const scope = await resolveAccessScope(currentUser);
+	let scopedIds = parsed.data.ids;
+	if (scope.projectIds !== null) {
+		const allowed = await prisma.materialRequest.findMany({
+			where: {
+				id: { in: parsed.data.ids },
+				projectId: { in: scope.projectIds },
+			},
+			select: { id: true },
+		});
+		const allowedSet = new Set(allowed.map((row) => row.id));
+		scopedIds = parsed.data.ids.filter((id) => allowedSet.has(id));
+	}
+	if (scopedIds.length === 0)
+		throw new Error("Nu ai acces la cererile selectate.");
 
-  const status = parsed.data.operation === "APPROVE" ? MaterialRequestStatus.APPROVED : MaterialRequestStatus.REJECTED;
-  const result = await prisma.materialRequest.updateMany({
-    where: { id: { in: scopedIds }, status: MaterialRequestStatus.PENDING },
-    data: { status, approvedAt: new Date(), approvedById: currentUser.id },
-  });
+	const status =
+		parsed.data.operation === "APPROVE"
+			? MaterialRequestStatus.APPROVED
+			: MaterialRequestStatus.REJECTED;
+	const result = await prisma.materialRequest.updateMany({
+		where: { id: { in: scopedIds }, status: MaterialRequestStatus.PENDING },
+		data: { status, approvedAt: new Date(), approvedById: currentUser.id },
+	});
 
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "MATERIAL_REQUEST_BULK",
-    entityId: "MULTI",
-    action: `MATERIAL_REQUESTS_${status}_BULK`,
-    diff: { ids: scopedIds, affectedRows: result.count },
-  });
+	await logActivity({
+		userId: currentUser.id,
+		entityType: "MATERIAL_REQUEST_BULK",
+		entityId: "MULTI",
+		action: `MATERIAL_REQUESTS_${status}_BULK`,
+		diff: { ids: scopedIds, affectedRows: result.count },
+	});
 
-  revalidatePath("/materiale");
-  revalidatePath("/panou");
+	revalidatePath("/materiale");
+	revalidatePath("/panou");
 }

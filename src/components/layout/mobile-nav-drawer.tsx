@@ -1,122 +1,143 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
-import type { AppModule } from "@/src/lib/access-control";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+	navItems,
+	navSections,
+} from "@/src/components/layout/navigation-config";
 import { Button } from "@/src/components/ui/button";
-import { navItems, navSections } from "@/src/components/layout/navigation-config";
+import type { AppModule } from "@/src/lib/access-control";
 import { cn } from "@/src/lib/utils";
 
-export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[] }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const pathname = usePathname();
-  const visibleSet = useMemo(() => new Set(visibleModules), [visibleModules]);
+export function MobileNavDrawer({
+	visibleModules,
+}: {
+	visibleModules: AppModule[];
+}) {
+	const [isOpen, setIsOpen] = useState(false);
+	const pathname = usePathname();
+	const visibleSet = useMemo(() => new Set(visibleModules), [visibleModules]);
 
-  const handleOpen = () => setIsOpen(true);
-  const handleClose = () => setIsOpen(false);
+	const handleOpen = useCallback(() => setIsOpen(true), []);
+	const handleClose = useCallback(() => setIsOpen(false), []);
 
-  // Close drawer when navigating
-  useEffect(() => {
-    setTimeout(() => {
-      handleClose();
-    }, 0);
-  }, [pathname]);
+	useEffect(() => {
+		const id = setTimeout(() => {
+			handleClose();
+		}, 0);
+		return () => clearTimeout(id);
+	}, [handleClose]);
 
-  // Handle window resize
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    const closeOnDesktop = (event: MediaQueryListEvent) => {
-      if (event.matches) handleClose();
-    };
+	useEffect(() => {
+		const media = window.matchMedia("(min-width: 1024px)");
+		const closeOnDesktop = (event: MediaQueryListEvent) => {
+			if (event.matches) handleClose();
+		};
 
-    media.addEventListener("change", closeOnDesktop);
-    return () => media.removeEventListener("change", closeOnDesktop);
-  }, []);
+		media.addEventListener("change", closeOnDesktop);
+		return () => media.removeEventListener("change", closeOnDesktop);
+	}, [handleClose]);
 
-  const drawer = (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={handleClose}
-          aria-hidden="true"
-        />
-      )}
+	const drawer = (
+		<>
+			{/* Backdrop */}
+			{isOpen && (
+				<div
+					className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+					onClick={handleClose}
+					aria-hidden="true"
+				/>
+			)}
 
-      {/* Drawer panel */}
-      <aside
-        className="fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--shell)] lg:hidden"
-      >
-        <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">ELTGRUP Manager</p>
-            <p className="text-base font-semibold text-[var(--heading)]">Meniu</p>
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleClose}
-            aria-label="Inchide meniul"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+			{/* Drawer panel */}
+			<aside className="fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--shell)] lg:hidden">
+				<div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+					<div>
+						<p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">
+							ELTGRUP Manager
+						</p>
+						<p className="text-base font-semibold text-[var(--heading)]">
+							Meniu
+						</p>
+					</div>
+					<Button
+						size="icon"
+						variant="ghost"
+						onClick={handleClose}
+						aria-label="Inchide meniul"
+					>
+						<X className="size-5" />
+					</Button>
+				</div>
 
-        <nav className="flex-1 overflow-y-auto px-4 py-5">
-          {navSections.map((section) => {
-            const sectionItems = navItems.filter((item) => item.section === section && visibleSet.has(item.module));
-            if (!sectionItems.length) return null;
+				<nav className="flex-1 overflow-y-auto px-4 py-5">
+					{navSections.map((section) => {
+						const sectionItems = navItems.filter(
+							(item) => item.section === section && visibleSet.has(item.module),
+						);
+						if (!sectionItems.length) return null;
 
-            return (
-              <section key={section} className="mb-6">
-                <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{section}</p>
-                <div className="flex flex-col gap-0.5">
-                  {sectionItems.map((item) => {
-                    const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                    const Icon = item.icon;
+						return (
+							<section key={section} className="mb-6">
+								<p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+									{section}
+								</p>
+								<div className="flex flex-col gap-0.5">
+									{sectionItems.map((item) => {
+										const active =
+											pathname === item.href ||
+											pathname.startsWith(`${item.href}/`);
+										const Icon = item.icon;
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={handleClose}
-                        className={cn(
-                          "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
-                          active
-                            ? "border-l-2 border-l-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--foreground)]"
-                            : "text-[var(--muted-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
-                        )}
-                      >
-                        <Icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-[var(--accent)]" : "")} />
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </nav>
-      </aside>
-    </>
-  );
+										return (
+											<Link
+												key={item.href}
+												href={item.href}
+												onClick={handleClose}
+												className={cn(
+													"flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
+													active
+														? "border-l-2 border-l-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--foreground)]"
+														: "text-[var(--muted-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
+												)}
+											>
+												<Icon
+													className={cn(
+														"h-4.5 w-4.5 shrink-0",
+														active ? "text-[var(--accent)]" : "",
+													)}
+												/>
+												<span className="truncate">{item.label}</span>
+											</Link>
+										);
+									})}
+								</div>
+							</section>
+						);
+					})}
+				</nav>
+			</aside>
+		</>
+	);
 
-  return (
-    <>
-      <Button
-        size="icon"
-        variant="secondary"
-        className="shrink-0 lg:hidden"
-        onClick={handleOpen}
-        aria-label="Deschide meniul"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-      {isOpen && typeof document !== "undefined" ? createPortal(drawer, document.body) : null}
-    </>
-  );
+	return (
+		<>
+			<Button
+				size="icon"
+				variant="secondary"
+				className="shrink-0 lg:hidden"
+				onClick={handleOpen}
+				aria-label="Deschide meniul"
+			>
+				<Menu className="size-5" />
+			</Button>
+			{isOpen && typeof document !== "undefined"
+				? createPortal(drawer, document.body)
+				: null}
+		</>
+	);
 }

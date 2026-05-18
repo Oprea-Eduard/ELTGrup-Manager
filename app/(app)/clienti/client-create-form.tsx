@@ -1,63 +1,86 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
 import { ClientType } from "@prisma/client";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
-import { createClientAction } from "./actions";
-import { initialActionState } from "@/src/lib/action-state";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { useRouter } from "next/navigation";
+import { initialActionState } from "@/src/lib/action-state";
+import { createClientAction } from "./actions";
 
 export function ClientCreateForm() {
-  const router = useRouter();
-  const [state, formAction, pending] = useActionState(createClientAction, initialActionState);
+	const [state, formAction, pending] = useActionState(
+		createClientAction,
+		initialActionState,
+	);
 
-  useEffect(() => {
-    if (state.ok && state.message) {
-      toast.success(state.message);
-      // Remove the dialog=create param from URL to close the dialog
-      const url = new URL(window.location.href);
-      url.searchParams.delete("dialog");
-      router.push(url.pathname + url.search);
-    }
-    if (!state.ok && state.message) toast.error(state.message);
-  }, [state, router]);
+	useEffect(() => {
+		if (state.ok && state.message) {
+			toast.success(state.message);
+			const url = new URL(window.location.href);
+			url.searchParams.delete("dialog");
+			window.location.href = url.pathname + url.search;
+		}
+		if (!state.ok && state.message) toast.error(state.message);
+	}, [state]);
 
-  return (
-    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <div>
-        <Input name="name" placeholder="Denumire client" required />
-        {state.errors?.name ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.name[0]}</p> : null}
-      </div>
-      <select
-        name="type"
-        defaultValue={ClientType.COMPANY}
-        className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
-        required
-      >
-        <option value={ClientType.COMPANY}>Companie</option>
-        <option value={ClientType.INDIVIDUAL}>Persoana fizica</option>
-        <option value={ClientType.PUBLIC_INSTITUTION}>Institutie publica</option>
-        <option value={ClientType.NGO}>ONG</option>
-        <option value={ClientType.OTHER}>Alt tip</option>
-      </select>
-      <Input name="cui" placeholder="CUI" />
-      <div>
-        <Input name="email" type="email" placeholder="Email" />
-        {state.errors?.email ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.email[0]}</p> : null}
-      </div>
-      <Input name="phone" placeholder="Telefon" />
-      <Input name="billingAddress" placeholder="Adresa facturare" className="md:col-span-2" />
-      <Input name="contactName" placeholder="Persoana contact" />
-      <div>
-        <Input name="contactEmail" placeholder="Email contact" type="email" />
-        {state.errors?.contactEmail ? <p className="mt-1 text-xs text-[var(--danger)]">{state.errors.contactEmail[0]}</p> : null}
-      </div>
-      <Input name="contactPhone" placeholder="Telefon contact" />
-      <div className="md:col-span-2 xl:col-span-4 flex justify-end">
-        <Button type="submit" disabled={pending}>{pending ? "Se salveaza..." : "Creeaza client"}</Button>
-      </div>
-    </form>
-  );
+	return (
+		<form
+			action={formAction}
+			className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+		>
+			<div>
+				<Input name="name" placeholder="Denumire client" required />
+				{state.errors?.name ? (
+					<p className="mt-1 text-xs text-[var(--danger)]">
+						{state.errors.name[0]}
+					</p>
+				) : null}
+			</div>
+			<select
+				name="type"
+				defaultValue={ClientType.COMPANY}
+				className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+				required
+			>
+				<option value={ClientType.COMPANY}>Companie</option>
+				<option value={ClientType.INDIVIDUAL}>Persoana fizica</option>
+				<option value={ClientType.PUBLIC_INSTITUTION}>
+					Institutie publica
+				</option>
+				<option value={ClientType.NGO}>ONG</option>
+				<option value={ClientType.OTHER}>Alt tip</option>
+			</select>
+			<Input name="cui" placeholder="CUI" />
+			<div>
+				<Input name="email" type="email" placeholder="Email" />
+				{state.errors?.email ? (
+					<p className="mt-1 text-xs text-[var(--danger)]">
+						{state.errors.email[0]}
+					</p>
+				) : null}
+			</div>
+			<Input name="phone" placeholder="Telefon" />
+			<Input
+				name="billingAddress"
+				placeholder="Adresa facturare"
+				className="md:col-span-2"
+			/>
+			<Input name="contactName" placeholder="Persoana contact" />
+			<div>
+				<Input name="contactEmail" placeholder="Email contact" type="email" />
+				{state.errors?.contactEmail ? (
+					<p className="mt-1 text-xs text-[var(--danger)]">
+						{state.errors.contactEmail[0]}
+					</p>
+				) : null}
+			</div>
+			<Input name="contactPhone" placeholder="Telefon contact" />
+			<div className="md:col-span-2 xl:col-span-4 flex justify-end">
+				<Button type="submit" disabled={pending}>
+					{pending ? "Se salveaza..." : "Creeaza client"}
+				</Button>
+			</div>
+		</form>
+	);
 }

@@ -1,290 +1,368 @@
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
-import { FormModal } from "@/src/components/forms/form-modal";
 import { KpiCard } from "@/src/components/ui/kpi-card";
 import { PageHeader } from "@/src/components/ui/page-header";
-import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
-import { buildListHref, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
+import { auth } from "@/src/lib/auth";
+import { prisma } from "@/src/lib/prisma";
+import {
+	buildListHref,
+	parsePositiveIntParam,
+	resolvePagination,
+} from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
-import { prisma } from "@/src/lib/prisma";
 import { bulkDeleteDailyReports, deleteDailyReport } from "./actions";
 import { DailyReportCreateForm } from "./daily-report-create-form";
 
 function buildRapoarteHref({
-  page,
-  projectId,
-  workOrderId,
+	page,
+	projectId,
+	workOrderId,
 }: {
-  page?: number;
-  projectId?: string;
-  workOrderId?: string;
+	page?: number;
+	projectId?: string;
+	workOrderId?: string;
 }) {
-  return buildListHref("/rapoarte-zilnice", {
-    page,
-    projectId,
-    workOrderId,
-  });
+	return buildListHref("/rapoarte-zilnice", {
+		page,
+		projectId,
+		workOrderId,
+	});
 }
 
 export default async function RapoarteZilnicePage({
-  searchParams,
+	searchParams,
 }: {
-  searchParams: Promise<{ projectId?: string; workOrderId?: string; page?: string }>;
+	searchParams: Promise<{
+		projectId?: string;
+		workOrderId?: string;
+		page?: string;
+	}>;
 }) {
-  const params = await searchParams;
-  const page = parsePositiveIntParam(params.page);
-  const pageSize = 20;
-  const session = await auth();
-  const roleKeys = session?.user?.roleKeys || [];
-  const userEmail = session?.user?.email || null;
-  const canCreate = hasPermission(roleKeys, "REPORTS", "CREATE", userEmail);
-  const canExport = hasPermission(roleKeys, "REPORTS", "EXPORT", userEmail);
-  const canDelete = hasPermission(roleKeys, "REPORTS", "DELETE", userEmail);
-  const scope = session?.user
-    ? await resolveAccessScope({
-        id: session.user.id,
-        email: session.user.email,
-        roleKeys: session.user.roleKeys || [],
-      })
-    : { projectIds: null, teamId: null };
-  const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
+	const params = await searchParams;
+	const page = parsePositiveIntParam(params.page);
+	const pageSize = 20;
+	const session = await auth();
+	const roleKeys = session?.user?.roleKeys || [];
+	const userEmail = session?.user?.email || null;
+	const canCreate = hasPermission(roleKeys, "REPORTS", "CREATE", userEmail);
+	const canExport = hasPermission(roleKeys, "REPORTS", "EXPORT", userEmail);
+	const canDelete = hasPermission(roleKeys, "REPORTS", "DELETE", userEmail);
+	const scope = session?.user
+		? await resolveAccessScope({
+				id: session.user.id,
+				email: session.user.email,
+				roleKeys: session.user.roleKeys || [],
+			})
+		: { projectIds: null, teamId: null };
+	const scopedProjectFilter =
+		scope.projectIds === null
+			? null
+			: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
 
-  const scopedProjectIds = scope.projectIds === null ? null : scope.projectIds.length ? scope.projectIds : ["__none__"];
-  const selectedProjectId =
-    params.projectId && (scope.projectIds === null || scope.projectIds.includes(params.projectId)) ? params.projectId : undefined;
-  const workOrdersWhere =
-    selectedProjectId
-      ? { deletedAt: null, projectId: selectedProjectId }
-      : { deletedAt: null, ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }) };
-  const reportsWhere =
-    selectedProjectId
-      ? { projectId: selectedProjectId, workOrderId: params.workOrderId || undefined }
-      : {
-          ...(scope.projectIds === null ? {} : { projectId: { in: scopedProjectIds! } }),
-          workOrderId: params.workOrderId || undefined,
-        };
+	const scopedProjectIds =
+		scope.projectIds === null
+			? null
+			: scope.projectIds.length
+				? scope.projectIds
+				: ["__none__"];
+	const selectedProjectId =
+		params.projectId &&
+		(scope.projectIds === null || scope.projectIds.includes(params.projectId))
+			? params.projectId
+			: undefined;
+	const workOrdersWhere = selectedProjectId
+		? { deletedAt: null, projectId: selectedProjectId }
+		: {
+				deletedAt: null,
+				...(scope.projectIds === null
+					? {}
+					: { projectId: scopedProjectFilter as { in: string[] } }),
+			};
+	const reportsWhere = selectedProjectId
+		? {
+				projectId: selectedProjectId,
+				workOrderId: params.workOrderId || undefined,
+			}
+		: {
+				...(scope.projectIds === null
+					? {}
+					: { projectId: { in: scopedProjectIds as string[] } }),
+				workOrderId: params.workOrderId || undefined,
+			};
 
-  const [projects, workOrders, totalReports, blockersCount, workersSummary] = await Promise.all([
-    prisma.project.findMany({
-      where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
-      select: { id: true, title: true },
-      orderBy: [{ title: "asc" }, { id: "asc" }],
-    }),
-    prisma.workOrder.findMany({
-      where: workOrdersWhere,
-      select: { id: true, title: true, projectId: true },
-      orderBy: [{ title: "asc" }, { id: "asc" }],
-      take: 100,
-    }),
-    prisma.dailySiteReport.count({ where: reportsWhere }),
-    prisma.dailySiteReport.count({
-      where: {
-        ...reportsWhere,
-        blockers: { not: null },
-        NOT: { blockers: "" },
-      },
-    }),
-    prisma.dailySiteReport.aggregate({
-      where: reportsWhere,
-      _sum: { workersCount: true },
-    }),
-  ]);
-  const { totalPages, currentPage, skip, take } = resolvePagination({
-    page,
-    totalItems: totalReports,
-    pageSize,
-  });
-  const reports = await prisma.dailySiteReport.findMany({
-    where: reportsWhere,
-    select: {
-      id: true,
-      reportDate: true,
-      weather: true,
-      workCompleted: true,
-      blockers: true,
-      workersCount: true,
-      createdBy: { select: { firstName: true, lastName: true } },
-      project: { select: { title: true } },
-      workOrder: { select: { title: true } },
-    },
-    orderBy: [{ reportDate: "desc" }, { id: "asc" }],
-    skip,
-    take,
-  });
-  const totalWorkers = workersSummary._sum.workersCount ?? 0;
+	const [projects, workOrders, totalReports, blockersCount, workersSummary] =
+		await Promise.all([
+			prisma.project.findMany({
+				where: {
+					deletedAt: null,
+					...(scope.projectIds === null
+						? {}
+						: { id: scopedProjectFilter as { in: string[] } }),
+				},
+				select: { id: true, title: true },
+				orderBy: [{ title: "asc" }, { id: "asc" }],
+			}),
+			prisma.workOrder.findMany({
+				where: workOrdersWhere,
+				select: { id: true, title: true, projectId: true },
+				orderBy: [{ title: "asc" }, { id: "asc" }],
+				take: 100,
+			}),
+			prisma.dailySiteReport.count({ where: reportsWhere }),
+			prisma.dailySiteReport.count({
+				where: {
+					...reportsWhere,
+					blockers: { not: null },
+					NOT: { blockers: "" },
+				},
+			}),
+			prisma.dailySiteReport.aggregate({
+				where: reportsWhere,
+				_sum: { workersCount: true },
+			}),
+		]);
+	const { totalPages, currentPage, skip, take } = resolvePagination({
+		page,
+		totalItems: totalReports,
+		pageSize,
+	});
+	const reports = await prisma.dailySiteReport.findMany({
+		where: reportsWhere,
+		select: {
+			id: true,
+			reportDate: true,
+			weather: true,
+			workCompleted: true,
+			blockers: true,
+			workersCount: true,
+			createdBy: { select: { firstName: true, lastName: true } },
+			project: { select: { title: true } },
+			workOrder: { select: { title: true } },
+		},
+		orderBy: [{ reportDate: "desc" }, { id: "asc" }],
+		skip,
+		take,
+	});
+	const totalWorkers = workersSummary._sum.workersCount ?? 0;
 
-  return (
-    <PermissionGuard resource="REPORTS" action="VIEW">
-      <div className="page-stack">
-        <PageHeader title="Rapoarte zilnice de santier" subtitle="Vreme, prezenta, progres lucrari, blocaje, SSM, poze si semnaturi" />
-        <Card>
-          <form className="grid gap-3 md:grid-cols-3">
-            <input type="hidden" name="page" value="1" />
-            <select name="projectId" defaultValue={selectedProjectId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
-              <option value="">Toate proiectele</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-            <select name="workOrderId" defaultValue={params.workOrderId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
-              <option value="">Toate lucrarile</option>
-              {workOrders.map((workOrder) => (
-                <option key={workOrder.id} value={workOrder.id}>
-                  {workOrder.title}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary">Filtreaza</Button>
-          </form>
-        </Card>
-        {canExport ? (
-          <div className="flex justify-end">
-            <Link href="/api/export/rapoarte">
-              <Button variant="secondary">Export CSV Rapoarte</Button>
-            </Link>
-          </div>
-        ) : null}
+	return (
+		<PermissionGuard resource="REPORTS" action="VIEW">
+			<div className="page-stack">
+				<PageHeader
+					title="Rapoarte zilnice de santier"
+					subtitle="Vreme, prezenta, progres lucrari, blocaje, SSM, poze si semnaturi"
+				/>
+				<Card>
+					<form className="grid gap-3 md:grid-cols-3">
+						<input type="hidden" name="page" value="1" />
+						<select
+							name="projectId"
+							defaultValue={selectedProjectId || ""}
+							className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm"
+						>
+							<option value="">Toate proiectele</option>
+							{projects.map((project) => (
+								<option key={project.id} value={project.id}>
+									{project.title}
+								</option>
+							))}
+						</select>
+						<select
+							name="workOrderId"
+							defaultValue={params.workOrderId || ""}
+							className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm"
+						>
+							<option value="">Toate lucrarile</option>
+							{workOrders.map((workOrder) => (
+								<option key={workOrder.id} value={workOrder.id}>
+									{workOrder.title}
+								</option>
+							))}
+						</select>
+						<Button type="submit" variant="secondary">
+							Filtreaza
+						</Button>
+					</form>
+				</Card>
+				{canExport ? (
+					<div className="flex justify-end">
+						<Link href="/api/export/rapoarte">
+							<Button variant="secondary">Export CSV Rapoarte</Button>
+						</Link>
+					</div>
+				) : null}
 
-        <section className="page-kpis">
-          <KpiCard
-            label="Rapoarte recente"
-            value={totalReports.toString()}
-            severity="info"
-          />
-          <KpiCard
-            label="Rapoarte cu blocaje"
-            value={blockersCount.toString()}
-            severity={blockersCount > 0 ? "blocked" : "done"}
-          />
-          <KpiCard
-            label="Muncitori raportati"
-            value={totalWorkers.toString()}
-            severity="info"
-          />
-        </section>
+				<section className="page-kpis">
+					<KpiCard
+						label="Rapoarte recente"
+						value={totalReports.toString()}
+						severity="info"
+					/>
+					<KpiCard
+						label="Rapoarte cu blocaje"
+						value={blockersCount.toString()}
+						severity={blockersCount > 0 ? "blocked" : "done"}
+					/>
+					<KpiCard
+						label="Muncitori raportati"
+						value={totalWorkers.toString()}
+						severity="info"
+					/>
+				</section>
 
-        {canCreate ? (
-          <Card>
-            <h2 className="text-lg font-extrabold">Raport nou</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Deschide formularul in dialog pentru completare rapida fara pierderea contextului.</p>
-            <div className="mt-3">
-              <FormModal
-                triggerLabel="Adauga raport zilnic"
-                title="Raport zilnic santier"
-                description="Completeaza vremea, progresul si blocajele pentru ziua curenta."
-              >
-                <DailyReportCreateForm
-                  projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-                  workOrders={workOrders.map((workOrder) => ({
-                    id: workOrder.id,
-                    label: workOrder.title,
-                    projectId: workOrder.projectId,
-                  }))}
-                  defaultProjectId={selectedProjectId}
-                  defaultWorkOrderId={params.workOrderId}
-                />
-              </FormModal>
-            </div>
-          </Card>
-        ) : null}
+				{canCreate ? (
+					<Card>
+						<h2 className="text-lg font-semibold">Raport nou</h2>
+						<p className="mt-1 text-sm text-[var(--muted)]">
+							Deschide formularul in dialog pentru completare rapida fara
+							pierderea contextului.
+						</p>
+						<div className="mt-3">
+							<FormModal
+								triggerLabel="Adauga raport zilnic"
+								title="Raport zilnic santier"
+								description="Completeaza vremea, progresul si blocajele pentru ziua curenta."
+							>
+								<DailyReportCreateForm
+									projects={projects.map((project) => ({
+										id: project.id,
+										label: project.title,
+									}))}
+									workOrders={workOrders.map((workOrder) => ({
+										id: workOrder.id,
+										label: workOrder.title,
+										projectId: workOrder.projectId,
+									}))}
+									defaultProjectId={selectedProjectId}
+									defaultWorkOrderId={params.workOrderId}
+								/>
+							</FormModal>
+						</div>
+					</Card>
+				) : null}
 
-        {canDelete && reports.length > 0 ? (
-          <Card className="bulk-zone">
-            <details>
-              <summary>Stergere bulk rapoarte</summary>
-              <form action={bulkDeleteDailyReports} className="mt-3 space-y-3">
-                <p className="text-sm text-[var(--muted)]">
-                  Selecteaza rapoartele din pagina curenta si confirma stergerea permanenta.
-                </p>
-                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <div className="grid gap-1 md:grid-cols-2">
-                    {reports.map((report) => (
-                      <label key={`bulk-${report.id}`} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
-                        <input type="checkbox" name="ids" value={report.id} className="h-4 w-4" />
-                        <span>
-                          {report.project.title} - {formatDate(report.reportDate)}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <ConfirmSubmitButton
-                  text="Sterge rapoartele selectate"
-                  confirmMessage="Confirmi stergerea permanenta a rapoartelor selectate?"
-                  variant="destructive"
-                />
-              </form>
-            </details>
-          </Card>
-        ) : null}
+				{canDelete && reports.length > 0 ? (
+					<Card className="bulk-zone">
+						<details>
+							<summary>Stergere bulk rapoarte</summary>
+							<form action={bulkDeleteDailyReports} className="mt-3 space-y-3">
+								<p className="text-sm text-[var(--muted)]">
+									Selecteaza rapoartele din pagina curenta si confirma stergerea
+									permanenta.
+								</p>
+								<div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+									<div className="grid gap-1 md:grid-cols-2">
+										{reports.map((report) => (
+											<label
+												key={`bulk-${report.id}`}
+												className="flex items-center gap-2 text-sm text-[var(--muted-strong)]"
+											>
+												<input
+													type="checkbox"
+													name="ids"
+													value={report.id}
+													className="size-4"
+												/>
+												<span>
+													{report.project.title} -{" "}
+													{formatDate(report.reportDate)}
+												</span>
+											</label>
+										))}
+									</div>
+								</div>
+								<ConfirmSubmitButton
+									text="Sterge rapoartele selectate"
+									confirmMessage="Confirmi stergerea permanenta a rapoartelor selectate?"
+									variant="destructive"
+								/>
+							</form>
+						</details>
+					</Card>
+				) : null}
 
-        <div className="space-y-3">
-          {reports.map((report) => (
-            <Card key={report.id}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-bold">{report.project.title}</p>
-                  <p className="text-xs text-[var(--muted)]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
-                  <p className="mt-2 text-sm text-[var(--muted-strong)]">{report.workCompleted}</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">Blocaje: {report.blockers || "N/A"}</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
-                    <Button size="sm" variant="secondary">Export PDF</Button>
-                  </Link>
-                  {canDelete ? (
-                    <form action={deleteDailyReport}>
-                      <input type="hidden" name="id" value={report.id} />
-                      <ConfirmSubmitButton
-                        text="Sterge"
-                        confirmMessage={`Confirmi stergerea raportului din ${formatDate(report.reportDate)}?`}
-                        variant="destructive"
-                      />
-                    </form>
-                  ) : null}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-        <div className="flex items-center justify-between text-sm text-[var(--muted)]">
-          <span>Pagina {currentPage} din {totalPages}</span>
-          <div className="flex gap-2">
-            {currentPage > 1 ? (
-              <Link
-                href={buildRapoarteHref({
-                  page: currentPage - 1,
-                  projectId: selectedProjectId,
-                  workOrderId: params.workOrderId || undefined,
-                })}
-                className="rounded-md border border-[var(--border)] px-3 py-1"
-              >
-                Anterior
-              </Link>
-            ) : null}
-            {currentPage < totalPages ? (
-              <Link
-                href={buildRapoarteHref({
-                  page: currentPage + 1,
-                  projectId: selectedProjectId,
-                  workOrderId: params.workOrderId || undefined,
-                })}
-                className="rounded-md border border-[var(--border)] px-3 py-1"
-              >
-                Urmator
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </PermissionGuard>
-  );
+				<div className="space-y-3">
+					{reports.map((report) => (
+						<Card key={report.id}>
+							<div className="flex flex-wrap items-start justify-between gap-3">
+								<div>
+									<p className="text-base font-bold">{report.project.title}</p>
+									<p className="text-xs text-[var(--muted)]">
+										Data: {formatDate(report.reportDate)} • Vreme:{" "}
+										{report.weather || "-"}
+									</p>
+									<p className="mt-2 text-sm text-[var(--muted-strong)]">
+										{report.workCompleted}
+									</p>
+									<p className="mt-1 text-xs text-[var(--muted)]">
+										Blocaje: {report.blockers || "N/A"}
+									</p>
+									<p className="mt-1 text-xs text-[var(--muted)]">
+										Creat de:{" "}
+										{report.createdBy
+											? `${report.createdBy.firstName} ${report.createdBy.lastName}`
+											: "-"}
+									</p>
+								</div>
+								<div className="flex flex-wrap gap-2">
+									<Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
+										<Button size="sm" variant="secondary">
+											Export PDF
+										</Button>
+									</Link>
+									{canDelete ? (
+										<form action={deleteDailyReport}>
+											<input type="hidden" name="id" value={report.id} />
+											<ConfirmSubmitButton
+												text="Sterge"
+												confirmMessage={`Confirmi stergerea raportului din ${formatDate(report.reportDate)}?`}
+												variant="destructive"
+											/>
+										</form>
+									) : null}
+								</div>
+							</div>
+						</Card>
+					))}
+				</div>
+				<div className="flex items-center justify-between text-sm text-[var(--muted)]">
+					<span>
+						Pagina {currentPage} din {totalPages}
+					</span>
+					<div className="flex gap-2">
+						{currentPage > 1 ? (
+							<Link
+								href={buildRapoarteHref({
+									page: currentPage - 1,
+									projectId: selectedProjectId,
+									workOrderId: params.workOrderId || undefined,
+								})}
+								className="rounded-md border border-[var(--border)] px-3 py-1"
+							>
+								Anterior
+							</Link>
+						) : null}
+						{currentPage < totalPages ? (
+							<Link
+								href={buildRapoarteHref({
+									page: currentPage + 1,
+									projectId: selectedProjectId,
+									workOrderId: params.workOrderId || undefined,
+								})}
+								className="rounded-md border border-[var(--border)] px-3 py-1"
+							>
+								Urmator
+							</Link>
+						) : null}
+					</div>
+				</div>
+			</div>
+		</PermissionGuard>
+	);
 }

@@ -9,374 +9,624 @@ import { Input } from "@/src/components/ui/input";
 import { KpiCard } from "@/src/components/ui/kpi-card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
-import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
-import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
-import { archiveTeamAction, restoreTeamAction, updateTeamAction, updateTeamMembersAction } from "./actions";
+import {
+	buildListHref,
+	parseEnumParam,
+	parsePositiveIntParam,
+	resolvePagination,
+} from "@/src/lib/query-params";
+import { hasPermission } from "@/src/lib/rbac";
+import {
+	archiveTeamAction,
+	restoreTeamAction,
+	updateTeamAction,
+	updateTeamMembersAction,
+} from "./actions";
 import { TeamCreateForm } from "./team-create-form";
 
 const statusOptions = ["active", "inactive", "archived", "all"] as const;
 type TeamStatusFilter = (typeof statusOptions)[number];
 
 const statusLabels: Record<TeamStatusFilter, string> = {
-  active: "Active",
-  inactive: "Inactive",
-  archived: "Arhivate",
-  all: "Toate",
+	active: "Active",
+	inactive: "Inactive",
+	archived: "Arhivate",
+	all: "Toate",
 };
 
 function buildEchipeHref({
-  page,
-  q,
-  status,
-  dialog,
+	page,
+	q,
+	status,
+	dialog,
 }: {
-  page?: number;
-  q?: string;
-  status?: TeamStatusFilter;
-  dialog?: "create";
+	page?: number;
+	q?: string;
+	status?: TeamStatusFilter;
+	dialog?: "create";
 }) {
-  return buildListHref("/echipe", {
-    page,
-    q,
-    status: status && status !== "active" ? status : undefined,
-    dialog,
-  });
+	return buildListHref("/echipe", {
+		page,
+		q,
+		status: status && status !== "active" ? status : undefined,
+		dialog,
+	});
+}
+
+type UserOption = { id: string; label: string };
+type WorkerOption = {
+	id: string;
+	teamId: string | null;
+	teamName: string | null;
+	label: string;
+};
+
+function TeamCreateDialog({
+	createHref: _createHref,
+	closeHref,
+	userOptions,
+	workerOptions,
+}: {
+	createHref: string;
+	closeHref: string;
+	userOptions: UserOption[];
+	workerOptions: WorkerOption[];
+}) {
+	return (
+		<div
+			className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--background)]/70 p-3 sm:items-center sm:p-5"
+			role="presentation"
+		>
+			<div className="w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-panel)] sm:p-5">
+				<div className="flex items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
+					<div>
+						<p className="text-base font-semibold text-[var(--foreground)]">
+							Creare echipa
+						</p>
+						<p className="mt-1 text-sm text-[var(--muted)]">
+							Echipa noua apare imediat in dropdown-ul de la lucrari.
+						</p>
+					</div>
+					<Link href={closeHref}>
+						<Button variant="ghost" size="sm">
+							Inchide
+						</Button>
+					</Link>
+				</div>
+				<div className="pt-4">
+					<TeamCreateForm users={userOptions} workers={workerOptions} />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function FiltersCard({
+	totalTeams,
+	hasFilters,
+	query,
+	statusFilter,
+}: {
+	totalTeams: number;
+	hasFilters: boolean;
+	query: string;
+	statusFilter: TeamStatusFilter;
+}) {
+	return (
+		<Card>
+			<div className="flex flex-wrap items-center gap-2">
+				<Badge tone="neutral">{totalTeams} echipe gasite</Badge>
+				{hasFilters ? (
+					<Badge tone="info">Filtru activ</Badge>
+				) : (
+					<Badge tone="success">Active pentru lucrari</Badge>
+				)}
+			</div>
+			<form
+				method="get"
+				action="/echipe"
+				className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-center"
+			>
+				<input type="hidden" name="page" value="1" />
+				<Input
+					name="q"
+					defaultValue={query}
+					placeholder="Cauta dupa nume, cod, regiune sau sef echipa"
+				/>
+				<select
+					name="status"
+					defaultValue={statusFilter}
+					className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+				>
+					{statusOptions.map((status) => (
+						<option key={status} value={status}>
+							{statusLabels[status]}
+						</option>
+					))}
+				</select>
+				<Button type="submit" variant="secondary">
+					Filtreaza
+				</Button>
+			</form>
+		</Card>
+	);
+}
+
+function TeamCard({
+	team,
+	workOrdersCount,
+	userOptions,
+	workerOptions,
+	canUpdate,
+	canDelete,
+}: {
+	team: {
+		id: string;
+		name: string;
+		code: string;
+		region: string | null;
+		isActive: boolean;
+		deletedAt: Date | null;
+		leadUserId: string | null;
+		leadUser: { firstName: string; lastName: string } | null;
+		workers: Array<{
+			id: string;
+			positionTitle: string;
+			user: { firstName: string; lastName: string };
+		}>;
+	};
+	workOrdersCount: number;
+	userOptions: UserOption[];
+	workerOptions: WorkerOption[];
+	canUpdate: boolean;
+	canDelete: boolean;
+}) {
+	const isArchived = Boolean(team.deletedAt);
+	return (
+		<Card key={team.id} className="space-y-3">
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<p className="truncate text-base font-semibold text-[var(--foreground)]">
+						{team.name}
+					</p>
+					<p className="mt-1 text-xs text-[var(--muted)]">{team.code}</p>
+				</div>
+				<Badge
+					tone={isArchived ? "warning" : team.isActive ? "success" : "neutral"}
+				>
+					{isArchived ? "Arhivat" : team.isActive ? "Activ" : "Inactiv"}
+				</Badge>
+			</div>
+			<div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
+				<p>Regiune: {team.region || "-"}</p>
+				<p>Lucrari active: {workOrdersCount}</p>
+				<p className="col-span-2">
+					Sef echipa:{" "}
+					{team.leadUser
+						? `${team.leadUser.firstName} ${team.leadUser.lastName}`
+						: "-"}
+				</p>
+				<p className="col-span-2">Membri: {team.workers.length}</p>
+			</div>
+			{team.workers.length ? (
+				<div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 p-3">
+					<p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
+						Membri echipa
+					</p>
+					<div className="mt-2 flex flex-wrap gap-2">
+						{team.workers.map((worker) => (
+							<Badge
+								key={worker.id}
+								tone="info"
+								className="normal-case tracking-normal"
+							>
+								{worker.user.firstName} {worker.user.lastName} -{" "}
+								{worker.positionTitle}
+							</Badge>
+						))}
+					</div>
+				</div>
+			) : null}
+			{canUpdate && !isArchived ? (
+				<>
+					<form
+						action={updateTeamAction}
+						className="grid gap-2 border-t border-[var(--border)] pt-3"
+					>
+						<input type="hidden" name="id" value={team.id} />
+						<div className="grid grid-cols-2 gap-2">
+							<Input name="name" defaultValue={team.name} placeholder="Nume" />
+							<Input name="code" defaultValue={team.code} placeholder="Cod" />
+						</div>
+						<Input
+							name="region"
+							defaultValue={team.region || ""}
+							placeholder="Regiune"
+						/>
+						<select
+							name="leadUserId"
+							defaultValue={team.leadUserId || ""}
+							className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+						>
+							<option value="">Fara sef echipa</option>
+							{userOptions.map((user) => (
+								<option key={user.id} value={user.id}>
+									{user.label}
+								</option>
+							))}
+						</select>
+						<select
+							name="isActive"
+							defaultValue={team.isActive ? "true" : "false"}
+							className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+						>
+							<option value="true">Activa pentru lucrari</option>
+							<option value="false">Inactiva</option>
+						</select>
+						<Button type="submit" size="sm">
+							Salveaza echipa
+						</Button>
+					</form>
+					<div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)]">
+						<details>
+							<summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
+								Gestioneaza membri ({team.workers.length})
+							</summary>
+							<form action={updateTeamMembersAction} className="space-y-2 p-3">
+								<input type="hidden" name="id" value={team.id} />
+								{workerOptions.length ? (
+									<div className="grid max-h-56 gap-2 overflow-y-auto pr-1">
+										{workerOptions.map((worker) => {
+											const checked = worker.teamId === team.id;
+											const isUnassigned = !worker.teamName;
+											return (
+												<label
+													key={worker.id}
+													className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-[var(--foreground)] ${checked ? "border-[var(--accent)]/30 bg-[var(--accent)]/10" : isUnassigned ? "border-[var(--success)]/20 bg-[var(--success)]/5" : "border-[var(--border)] bg-[var(--surface)]/20"}`}
+												>
+													<input
+														type="checkbox"
+														name="memberIds"
+														value={worker.id}
+														defaultChecked={checked}
+														className="mt-1 size-4 accent-[var(--accent)]"
+													/>
+													<span className="min-w-0">
+														<span className="block truncate">
+															{worker.label}
+														</span>
+														<span className="block text-xs text-[var(--muted)]">
+															{checked
+																? "Membru aici"
+																: isUnassigned
+																	? "Nealocat"
+																	: `Acum in ${worker.teamName}`}
+														</span>
+													</span>
+												</label>
+											);
+										})}
+									</div>
+								) : (
+									<p className="text-sm text-[var(--muted)]">
+										Nu exista profiluri de muncitor disponibile.
+									</p>
+								)}
+								<Button type="submit" size="sm" variant="secondary">
+									Salveaza membri
+								</Button>
+							</form>
+						</details>
+					</div>
+				</>
+			) : null}
+			<div className="flex flex-wrap gap-2">
+				{canDelete && !isArchived ? (
+					<form action={archiveTeamAction}>
+						<input type="hidden" name="id" value={team.id} />
+						<ConfirmSubmitButton
+							text="Arhiveaza"
+							confirmMessage={`Confirmi arhivarea echipei ${team.name}?`}
+							variant="destructive"
+						/>
+					</form>
+				) : null}
+				{canUpdate && isArchived ? (
+					<form action={restoreTeamAction}>
+						<input type="hidden" name="id" value={team.id} />
+						<ConfirmSubmitButton
+							text="Restaureaza"
+							confirmMessage={`Restaurezi echipa ${team.name}?`}
+							variant="secondary"
+						/>
+					</form>
+				) : null}
+			</div>
+		</Card>
+	);
 }
 
 export default async function EchipePage({
-  searchParams,
+	searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string; dialog?: string }>;
+	searchParams: Promise<{
+		page?: string;
+		q?: string;
+		status?: string;
+		dialog?: string;
+	}>;
 }) {
-  const params = await searchParams;
-  const query = params.q?.trim() || "";
-  const statusFilter = parseEnumParam(params.status, statusOptions) || "active";
-  const page = parsePositiveIntParam(params.page);
-  const pageSize = 12;
-  const createDialogOpen = params.dialog === "create";
-  const session = await auth();
-  const userContext = {
-    id: session?.user?.id || "",
-    email: session?.user?.email || null,
-    roleKeys: session?.user?.roleKeys || [],
-  };
-  const canCreate = hasPermission(userContext.roleKeys, "TEAMS", "CREATE", userContext.email);
-  const canUpdate = hasPermission(userContext.roleKeys, "TEAMS", "UPDATE", userContext.email);
-  const canDelete = hasPermission(userContext.roleKeys, "TEAMS", "DELETE", userContext.email);
+	const params = await searchParams;
+	const query = params.q?.trim() || "";
+	const statusFilter = parseEnumParam(params.status, statusOptions) || "active";
+	const page = parsePositiveIntParam(params.page);
+	const pageSize = 12;
+	const createDialogOpen = params.dialog === "create";
+	const session = await auth();
+	const userContext = {
+		id: session?.user?.id || "",
+		email: session?.user?.email || null,
+		roleKeys: session?.user?.roleKeys || [],
+	};
+	const canCreate = hasPermission(
+		userContext.roleKeys,
+		"TEAMS",
+		"CREATE",
+		userContext.email,
+	);
+	const canUpdate = hasPermission(
+		userContext.roleKeys,
+		"TEAMS",
+		"UPDATE",
+		userContext.email,
+	);
+	const canDelete = hasPermission(
+		userContext.roleKeys,
+		"TEAMS",
+		"DELETE",
+		userContext.email,
+	);
 
-  const where = {
-    ...(statusFilter === "active" ? { deletedAt: null, isActive: true } : {}),
-    ...(statusFilter === "inactive" ? { deletedAt: null, isActive: false } : {}),
-    ...(statusFilter === "archived" ? { deletedAt: { not: null } } : {}),
-    ...(query
-      ? {
-          OR: [
-            { name: { contains: query, mode: "insensitive" as const } },
-            { code: { contains: query, mode: "insensitive" as const } },
-            { region: { contains: query, mode: "insensitive" as const } },
-            { leadUser: { firstName: { contains: query, mode: "insensitive" as const } } },
-            { leadUser: { lastName: { contains: query, mode: "insensitive" as const } } },
-          ],
-        }
-      : {}),
-  };
+	const where = {
+		...(statusFilter === "active" ? { deletedAt: null, isActive: true } : {}),
+		...(statusFilter === "inactive"
+			? { deletedAt: null, isActive: false }
+			: {}),
+		...(statusFilter === "archived" ? { deletedAt: { not: null } } : {}),
+		...(query
+			? {
+					OR: [
+						{ name: { contains: query, mode: "insensitive" as const } },
+						{ code: { contains: query, mode: "insensitive" as const } },
+						{ region: { contains: query, mode: "insensitive" as const } },
+						{
+							leadUser: {
+								firstName: { contains: query, mode: "insensitive" as const },
+							},
+						},
+						{
+							leadUser: {
+								lastName: { contains: query, mode: "insensitive" as const },
+							},
+						},
+					],
+				}
+			: {}),
+	};
 
-  const [totalTeams, activeTeams, inactiveTeams, totalWorkers, teamsWithWorkOrders, users, workerProfiles] = await Promise.all([
-    prisma.team.count({ where }),
-    prisma.team.count({ where: { deletedAt: null, isActive: true } }),
-    prisma.team.count({ where: { deletedAt: null, isActive: false } }),
-    prisma.workerProfile.count({ where: { deletedAt: null } }),
-    prisma.workOrder.groupBy({
-      by: ["teamId"],
-      where: { teamId: { not: null }, deletedAt: null },
-      _count: { _all: true },
-    }),
-    prisma.user.findMany({
-      where: { isActive: true, deletedAt: null },
-      select: { id: true, firstName: true, lastName: true, email: true },
-      orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { id: "asc" }],
-    }),
-    prisma.workerProfile.findMany({
-      where: { deletedAt: null },
-      select: {
-        id: true,
-        positionTitle: true,
-        teamId: true,
-        team: { select: { name: true } },
-        user: { select: { firstName: true, lastName: true, email: true } },
-      },
-      orderBy: [{ user: { firstName: "asc" } }, { user: { lastName: "asc" } }, { id: "asc" }],
-    }),
-  ]);
-  const workOrderCountByTeamId = new Map(
-    teamsWithWorkOrders.filter((item) => item.teamId).map((item) => [item.teamId as string, item._count._all]),
-  );
-  const { totalPages, currentPage, skip, take } = resolvePagination({
-    page,
-    totalItems: totalTeams,
-    pageSize,
-  });
-  const teams = await prisma.team.findMany({
-    where,
-    select: {
-      id: true,
-      name: true,
-      code: true,
-      region: true,
-      isActive: true,
-      deletedAt: true,
-      leadUserId: true,
-      leadUser: { select: { firstName: true, lastName: true } },
-      workers: {
-        where: { deletedAt: null },
-        select: {
-          id: true,
-          positionTitle: true,
-          user: { select: { firstName: true, lastName: true } },
-        },
-        orderBy: [{ user: { firstName: "asc" } }, { user: { lastName: "asc" } }],
-      },
-    },
-    orderBy: [{ deletedAt: "asc" }, { name: "asc" }, { id: "asc" }],
-    skip,
-    take,
-  });
+	const [
+		totalTeams,
+		activeTeams,
+		inactiveTeams,
+		totalWorkers,
+		teamsWithWorkOrders,
+		users,
+		workerProfiles,
+	] = await Promise.all([
+		prisma.team.count({ where }),
+		prisma.team.count({ where: { deletedAt: null, isActive: true } }),
+		prisma.team.count({ where: { deletedAt: null, isActive: false } }),
+		prisma.workerProfile.count({ where: { deletedAt: null } }),
+		prisma.workOrder.groupBy({
+			by: ["teamId"],
+			where: { teamId: { not: null }, deletedAt: null },
+			_count: { _all: true },
+		}),
+		prisma.user.findMany({
+			where: { isActive: true, deletedAt: null },
+			select: { id: true, firstName: true, lastName: true, email: true },
+			orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { id: "asc" }],
+		}),
+		prisma.workerProfile.findMany({
+			where: { deletedAt: null },
+			select: {
+				id: true,
+				positionTitle: true,
+				teamId: true,
+				team: { select: { name: true } },
+				user: { select: { firstName: true, lastName: true, email: true } },
+			},
+			orderBy: [
+				{ user: { firstName: "asc" } },
+				{ user: { lastName: "asc" } },
+				{ id: "asc" },
+			],
+		}),
+	]);
+	const workOrderCountByTeamId = new Map(
+		teamsWithWorkOrders.flatMap((item) =>
+			item.teamId ? [[item.teamId as string, item._count._all] as const] : [],
+		),
+	);
+	const { totalPages, currentPage, skip, take } = resolvePagination({
+		page,
+		totalItems: totalTeams,
+		pageSize,
+	});
+	const teams = await prisma.team.findMany({
+		where,
+		select: {
+			id: true,
+			name: true,
+			code: true,
+			region: true,
+			isActive: true,
+			deletedAt: true,
+			leadUserId: true,
+			leadUser: { select: { firstName: true, lastName: true } },
+			workers: {
+				where: { deletedAt: null },
+				select: {
+					id: true,
+					positionTitle: true,
+					user: { select: { firstName: true, lastName: true } },
+				},
+				orderBy: [
+					{ user: { firstName: "asc" } },
+					{ user: { lastName: "asc" } },
+				],
+			},
+		},
+		orderBy: [{ deletedAt: "asc" }, { name: "asc" }, { id: "asc" }],
+		skip,
+		take,
+	});
+	const createHref = buildEchipeHref({
+		page: currentPage,
+		q: query,
+		status: statusFilter,
+		dialog: "create",
+	});
+	const closeHref = buildEchipeHref({
+		page: currentPage,
+		q: query,
+		status: statusFilter,
+	});
+	const prevHref =
+		currentPage > 1
+			? buildEchipeHref({
+					page: currentPage - 1,
+					q: query,
+					status: statusFilter,
+					dialog: createDialogOpen ? "create" : undefined,
+				})
+			: null;
+	const nextHref =
+		currentPage < totalPages
+			? buildEchipeHref({
+					page: currentPage + 1,
+					q: query,
+					status: statusFilter,
+					dialog: createDialogOpen ? "create" : undefined,
+				})
+			: null;
+	const hasFilters = Boolean(query || statusFilter !== "active");
+	const userOptions: UserOption[] = users.map((user) => ({
+		id: user.id,
+		label: `${user.firstName} ${user.lastName}${user.email ? ` (${user.email})` : ""}`,
+	}));
+	const workerOptions: WorkerOption[] = workerProfiles.map((profile) => ({
+		id: profile.id,
+		teamId: profile.teamId,
+		teamName: profile.team?.name || null,
+		label: `${profile.user.firstName} ${profile.user.lastName} - ${profile.positionTitle}${profile.user.email ? ` (${profile.user.email})` : ""}`,
+	}));
 
-  const createHref = buildEchipeHref({ page: currentPage, q: query, status: statusFilter, dialog: "create" });
-  const closeHref = buildEchipeHref({ page: currentPage, q: query, status: statusFilter });
-  const prevHref = currentPage > 1 ? buildEchipeHref({ page: currentPage - 1, q: query, status: statusFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
-  const nextHref = currentPage < totalPages ? buildEchipeHref({ page: currentPage + 1, q: query, status: statusFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
-  const hasFilters = Boolean(query || statusFilter !== "active");
-  const userOptions = users.map((user) => ({
-    id: user.id,
-    label: `${user.firstName} ${user.lastName}${user.email ? ` (${user.email})` : ""}`,
-  }));
-  const workerOptions = workerProfiles.map((profile) => ({
-    id: profile.id,
-    teamId: profile.teamId,
-    teamName: profile.team?.name || null,
-    label: `${profile.user.firstName} ${profile.user.lastName} - ${profile.positionTitle}${profile.user.email ? ` (${profile.user.email})` : ""}`,
-  }));
-
-  return (
-    <PermissionGuard resource="TEAMS" action="VIEW">
-      <div className="page-stack">
-        <PageHeader
-          title="Echipe"
-          subtitle="Creeaza echipe operationale, seteaza responsabilul si controleaza ce grupuri pot fi alocate pe lucrari."
-          actions={
-            canCreate ? (
-              <Link href={createHref}>
-                <Button>Adauga echipa</Button>
-              </Link>
-            ) : null
-          }
-        />
-
-        {createDialogOpen && canCreate ? (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--background)]/70 p-3 sm:items-center sm:p-5" role="presentation">
-            <div className="w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-panel)] sm:p-5">
-              <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
-                <div>
-                  <p className="text-base font-semibold text-[var(--foreground)]">Creare echipa</p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">Echipa noua apare imediat in dropdown-ul de la lucrari.</p>
-                </div>
-                <Link href={closeHref}>
-                  <Button variant="ghost" size="sm">Inchide</Button>
-                </Link>
-              </div>
-              <div className="pt-4">
-                <TeamCreateForm users={userOptions} workers={workerOptions} />
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <Card>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">{totalTeams} echipe gasite</Badge>
-            {hasFilters ? <Badge tone="info">Filtru activ</Badge> : <Badge tone="success">Active pentru lucrari</Badge>}
-          </div>
-          <form method="get" action="/echipe" className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-center">
-            <input type="hidden" name="page" value="1" />
-            <Input name="q" defaultValue={query} placeholder="Cauta dupa nume, cod, regiune sau sef echipa" />
-            <select
-              name="status"
-              defaultValue={statusFilter}
-              className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {statusLabels[status]}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary">Filtreaza</Button>
-          </form>
-        </Card>
-
-        <section className="page-kpis">
-          <KpiCard
-            label="Active"
-            value={activeTeams.toString()}
-            severity="active"
-          />
-          <KpiCard
-            label="Inactive"
-            value={inactiveTeams.toString()}
-            severity={inactiveTeams > 0 ? "pending" : "done"}
-          />
-          <KpiCard
-            label="Membri disponibili"
-            value={totalWorkers.toString()}
-            severity="info"
-          />
-        </section>
-
-        {teams.length === 0 ? (
-          <EmptyState
-            title={hasFilters ? "Nu exista echipe pentru filtrele curente" : "Nu exista echipe active"}
-            description={hasFilters ? "Schimba filtrul sau cautarea." : "Creeaza prima echipa pentru a o putea trimite la lucrari."}
-          />
-        ) : null}
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {teams.map((team) => {
-            const workOrdersCount = workOrderCountByTeamId.get(team.id) || 0;
-            const isArchived = Boolean(team.deletedAt);
-            return (
-              <Card key={team.id} className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-[var(--foreground)]">{team.name}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{team.code}</p>
-                  </div>
-                  <Badge tone={isArchived ? "warning" : team.isActive ? "success" : "neutral"}>
-                    {isArchived ? "Arhivat" : team.isActive ? "Activ" : "Inactiv"}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
-                  <p>Regiune: {team.region || "-"}</p>
-                  <p>Lucrari active: {workOrdersCount}</p>
-                  <p className="col-span-2">Sef echipa: {team.leadUser ? `${team.leadUser.firstName} ${team.leadUser.lastName}` : "-"}</p>
-                  <p className="col-span-2">Membri: {team.workers.length}</p>
-                </div>
-
-                {team.workers.length ? (
-                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/30 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Membri echipa</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {team.workers.map((worker) => (
-                        <Badge key={worker.id} tone="info" className="normal-case tracking-normal">
-                          {worker.user.firstName} {worker.user.lastName} - {worker.positionTitle}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {canUpdate && !isArchived ? (
-                  <form action={updateTeamAction} className="grid gap-2 border-t border-[var(--border)] pt-3">
-                    <input type="hidden" name="id" value={team.id} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input name="name" defaultValue={team.name} placeholder="Nume" />
-                      <Input name="code" defaultValue={team.code} placeholder="Cod" />
-                    </div>
-                    <Input name="region" defaultValue={team.region || ""} placeholder="Regiune" />
-                    <select name="leadUserId" defaultValue={team.leadUserId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]">
-                      <option value="">Fara sef echipa</option>
-                      {userOptions.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select name="isActive" defaultValue={team.isActive ? "true" : "false"} className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]">
-                      <option value="true">Activa pentru lucrari</option>
-                      <option value="false">Inactiva</option>
-                    </select>
-                    <Button type="submit" size="sm">Salveaza echipa</Button>
-                  </form>
-                ) : null}
-
-                {canUpdate && !isArchived ? (
-                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)]">
-                    <details>
-                      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-[var(--foreground)]">Gestioneaza membri ({team.workers.length})</summary>
-                      <form action={updateTeamMembersAction} className="space-y-2 p-3">
-                        <input type="hidden" name="id" value={team.id} />
-                        {workerOptions.length ? (
-                          <div className="grid max-h-56 gap-2 overflow-y-auto pr-1">
-                            {workerOptions.map((worker) => {
-                              const checked = worker.teamId === team.id;
-                              const isUnassigned = !worker.teamName;
-                              return (
-                                <label key={worker.id} className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-[var(--foreground)] ${checked ? "border-[var(--accent)]/30 bg-[var(--accent)]/10" : isUnassigned ? "border-[var(--success)]/20 bg-[var(--success)]/5" : "border-[var(--border)] bg-[var(--surface)]/20"}`}>
-                                  <input
-                                    type="checkbox"
-                                    name="memberIds"
-                                    value={worker.id}
-                                    defaultChecked={checked}
-                                    className="mt-1 h-4 w-4 accent-[var(--accent)]"
-                                  />
-                                  <span className="min-w-0">
-                                    <span className="block truncate">{worker.label}</span>
-                                    <span className="block text-xs text-[var(--muted)]">
-                                      {checked ? "Membru aici" : isUnassigned ? "Nealocat" : `Acum in ${worker.teamName}`}
-                                    </span>
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-[var(--muted)]">Nu exista profiluri de muncitor disponibile.</p>
-                        )}
-                        <Button type="submit" size="sm" variant="secondary">Salveaza membri</Button>
-                      </form>
-                    </details>
-                  </div>
-                ) : null}
-
-                <div className="flex flex-wrap gap-2">
-                  {canDelete && !isArchived ? (
-                    <form action={archiveTeamAction}>
-                      <input type="hidden" name="id" value={team.id} />
-                      <ConfirmSubmitButton text="Arhiveaza" confirmMessage={`Confirmi arhivarea echipei ${team.name}?`} variant="destructive" />
-                    </form>
-                  ) : null}
-                  {canUpdate && isArchived ? (
-                    <form action={restoreTeamAction}>
-                      <input type="hidden" name="id" value={team.id} />
-                      <ConfirmSubmitButton text="Restaureaza" confirmMessage={`Restaurezi echipa ${team.name}?`} variant="secondary" />
-                    </form>
-                  ) : null}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
-          <span>
-            Pagina {currentPage} din {totalPages}
-          </span>
-          <div className="flex gap-2">
-            {prevHref ? (
-              <Link href={prevHref}>
-                <Button variant="secondary" size="sm">Inapoi</Button>
-              </Link>
-            ) : null}
-            {nextHref ? (
-              <Link href={nextHref}>
-                <Button variant="secondary" size="sm">Inainte</Button>
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </PermissionGuard>
-  );
+	return (
+		<PermissionGuard resource="TEAMS" action="VIEW">
+			<div className="page-stack">
+				<PageHeader
+					title="Echipe"
+					subtitle="Creeaza echipe operationale, seteaza responsabilul si controleaza ce grupuri pot fi alocate pe lucrari."
+					actions={
+						canCreate ? (
+							<Link href={createHref}>
+								<Button>Adauga echipa</Button>
+							</Link>
+						) : null
+					}
+				/>
+				{createDialogOpen && canCreate ? (
+					<TeamCreateDialog
+						createHref={createHref}
+						closeHref={closeHref}
+						userOptions={userOptions}
+						workerOptions={workerOptions}
+					/>
+				) : null}
+				<FiltersCard
+					totalTeams={totalTeams}
+					hasFilters={hasFilters}
+					query={query}
+					statusFilter={statusFilter}
+				/>
+				<section className="page-kpis">
+					<KpiCard
+						label="Active"
+						value={activeTeams.toString()}
+						severity="active"
+					/>
+					<KpiCard
+						label="Inactive"
+						value={inactiveTeams.toString()}
+						severity={inactiveTeams > 0 ? "pending" : "done"}
+					/>
+					<KpiCard
+						label="Membri disponibili"
+						value={totalWorkers.toString()}
+						severity="info"
+					/>
+				</section>
+				{teams.length === 0 ? (
+					<EmptyState
+						title={
+							hasFilters
+								? "Nu exista echipe pentru filtrele curente"
+								: "Nu exista echipe active"
+						}
+						description={
+							hasFilters
+								? "Schimba filtrul sau cautarea."
+								: "Creeaza prima echipa pentru a o putea trimite la lucrari."
+						}
+					/>
+				) : null}
+				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+					{teams.map((team) => (
+						<TeamCard
+							key={team.id}
+							team={team}
+							workOrdersCount={workOrderCountByTeamId.get(team.id) || 0}
+							userOptions={userOptions}
+							workerOptions={workerOptions}
+							canUpdate={canUpdate}
+							canDelete={canDelete}
+						/>
+					))}
+				</div>
+				<div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
+					<span>
+						Pagina {currentPage} din {totalPages}
+					</span>
+					<div className="flex gap-2">
+						{prevHref ? (
+							<Link href={prevHref}>
+								<Button variant="secondary" size="sm">
+									Inapoi
+								</Button>
+							</Link>
+						) : null}
+						{nextHref ? (
+							<Link href={nextHref}>
+								<Button variant="secondary" size="sm">
+									Inainte
+								</Button>
+							</Link>
+						) : null}
+					</div>
+				</div>
+			</div>
+		</PermissionGuard>
+	);
 }

@@ -1,0 +1,9 @@
+{
+	"ignore": {
+		"files": ["html/**"],
+		"rules": [
+			"react-doctor/server-auth-actions",
+			"jsx-a11y/label-has-associated-control"
+		]
+	}
+}

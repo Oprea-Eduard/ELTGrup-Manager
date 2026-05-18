@@ -1,4 +1,8 @@
-import { AssignmentStatus, Prisma, SubcontractorApprovalStatus } from "@prisma/client";
+import {
+	AssignmentStatus,
+	type Prisma,
+	type SubcontractorApprovalStatus,
+} from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
@@ -8,381 +12,585 @@ import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { resolveAccessScope } from "@/src/lib/access-scope";
 import { auth } from "@/src/lib/auth";
-import { resolveAccessScope, subcontractorScopeWhere } from "@/src/lib/access-scope";
-import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
-import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
+import {
+	buildListHref,
+	parseEnumParam,
+	parsePositiveIntParam,
+	resolvePagination,
+} from "@/src/lib/query-params";
+import { hasPermission } from "@/src/lib/rbac";
 import { bulkArchiveSubcontractorsAction } from "./actions";
 import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 import { SubcontractorCreateForm } from "./subcontractor-create-form";
 
-
 const subcontractorStatusLabels: Record<SubcontractorApprovalStatus, string> = {
-  IN_VERIFICARE: "In verificare",
-  APROBAT: "Aprobat",
-  RESPINS: "Respins",
-  SUSPENDAT: "Suspendat",
+	IN_VERIFICARE: "In verificare",
+	APROBAT: "Aprobat",
+	RESPINS: "Respins",
+	SUSPENDAT: "Suspendat",
 };
 
 const subcontractorStatusOptions = [...SUBCONTRACTOR_APPROVAL_STATUSES];
 const archiveVisibilityOptions = ["active", "archived", "all"] as const;
 type ArchiveVisibility = (typeof archiveVisibilityOptions)[number];
 const archiveVisibilityLabels: Record<ArchiveVisibility, string> = {
-  active: "Active",
-  archived: "Arhivate",
-  all: "Toate",
+	active: "Active",
+	archived: "Arhivate",
+	all: "Toate",
 };
 
 function buildSubcontractoriHref({
-  page,
-  q,
-  status,
-  archived,
-  dialog,
+	page,
+	q,
+	status,
+	archived,
+	dialog,
 }: {
-  page?: number;
-  q?: string;
-  status?: SubcontractorApprovalStatus | null;
-  archived?: ArchiveVisibility;
-  dialog?: "create";
+	page?: number;
+	q?: string;
+	status?: SubcontractorApprovalStatus | null;
+	archived?: ArchiveVisibility;
+	dialog?: "create";
 }) {
-  return buildListHref("/subcontractori", {
-    page,
-    q,
-    status: status || undefined,
-    archived: archived === "active" ? undefined : archived,
-    dialog,
-  });
+	return buildListHref("/subcontractori", {
+		page,
+		q,
+		status: status || undefined,
+		archived: archived === "active" ? undefined : archived,
+		dialog,
+	});
 }
 
 function getStatusTone(status: SubcontractorApprovalStatus) {
-  switch (status) {
-    case "APROBAT":
-      return "success";
-    case "RESPINS":
-      return "danger";
-    case "SUSPENDAT":
-      return "warning";
-    default:
-      return "info";
-  }
+	switch (status) {
+		case "APROBAT":
+			return "success";
+		case "RESPINS":
+			return "danger";
+		case "SUSPENDAT":
+			return "warning";
+		default:
+			return "info";
+	}
+}
+
+type SubcontractorRow = {
+	id: string;
+	name: string;
+	approvalStatus: SubcontractorApprovalStatus;
+	contactName: string | null;
+	email: string | null;
+	phone: string | null;
+	cui: string | null;
+	notes: string | null;
+	deletedAt: Date | null;
+	updatedAt: Date;
+	assignments: { id: string }[];
+};
+
+function SubcontractorFiltersCard({
+	totalSubcontractors,
+	hasFilters,
+	query,
+	statusFilter,
+	archivedFilter,
+}: {
+	totalSubcontractors: number;
+	hasFilters: boolean;
+	query: string;
+	statusFilter: SubcontractorApprovalStatus | null;
+	archivedFilter: ArchiveVisibility;
+}) {
+	return (
+		<Card>
+			<div className="flex flex-wrap items-center gap-2">
+				<Badge tone="neutral">
+					{totalSubcontractors} subcontractori gasiti
+				</Badge>
+				{hasFilters ? (
+					<Badge tone="info">Filtru activ</Badge>
+				) : (
+					<Badge tone="success">Fara filtre</Badge>
+				)}
+			</div>
+			<div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto]">
+				<form
+					method="get"
+					action="/subcontractori"
+					className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto] lg:col-span-2"
+				>
+					<input type="hidden" name="page" value="1" />
+					<Input
+						name="q"
+						defaultValue={query}
+						placeholder="Cauta dupa nume, CUI, contact, email, telefon sau nota"
+					/>
+					<select
+						name="status"
+						defaultValue={statusFilter || ""}
+						className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+					>
+						<option value="">Toate statusurile</option>
+						{subcontractorStatusOptions.map((status) => (
+							<option key={status} value={status}>
+								{subcontractorStatusLabels[status]}
+							</option>
+						))}
+					</select>
+					<select
+						name="archived"
+						defaultValue={archivedFilter}
+						className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+					>
+						{archiveVisibilityOptions.map((option) => (
+							<option key={option} value={option}>
+								{archiveVisibilityLabels[option]}
+							</option>
+						))}
+					</select>
+					<Button
+						type="submit"
+						variant="secondary"
+						className="w-full lg:w-auto"
+					>
+						Aplica filtre
+					</Button>
+				</form>
+				{hasFilters ? (
+					<form method="get" action="/subcontractori" className="lg:self-end">
+						<Button type="submit" variant="ghost" className="w-full lg:w-auto">
+							Reseteaza
+						</Button>
+					</form>
+				) : null}
+			</div>
+		</Card>
+	);
+}
+
+function SubcontractorCreateDialog({
+	createHref: _createHref,
+	closeHref,
+}: {
+	createHref: string;
+	closeHref: string;
+}) {
+	return (
+		<div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(7,12,18,0.74)] p-3 sm:items-center sm:p-6">
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="subcontractor-create-title"
+				className="w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-panel)]"
+			>
+				<div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-5">
+					<div>
+						<p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
+							Creare subcontractor
+						</p>
+						<h2
+							id="subcontractor-create-title"
+							className="mt-1 text-lg font-semibold text-[var(--foreground)]"
+						>
+							Adauga subcontractor
+						</h2>
+						<p className="mt-1 text-sm text-[var(--muted)]">
+							Formularul este deschis intr-un dialog pentru a pastra contextul
+							listei si filtrul curent.
+						</p>
+					</div>
+					<Link href={closeHref}>
+						<Button variant="ghost" size="sm" aria-label="Inchide formularul">
+							Inchide
+						</Button>
+					</Link>
+				</div>
+				<div className="max-h-[80vh] overflow-y-auto px-4 py-4 sm:px-5">
+					<SubcontractorCreateForm />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function BulkActionsCard({
+	subcontractors,
+	canDelete,
+}: {
+	subcontractors: SubcontractorRow[];
+	canDelete: boolean;
+}) {
+	if (!canDelete) return null;
+	return (
+		<Card className="bulk-zone">
+			<details>
+				<summary>Actiuni bulk subcontractori</summary>
+				<form
+					action={bulkArchiveSubcontractorsAction}
+					className="mt-3 space-y-3"
+				>
+					<div className="bulk-controls flex flex-wrap items-center gap-2">
+						<Badge tone="warning">Arhivare soft delete</Badge>
+						<ConfirmSubmitButton
+							text="Arhiveaza selectia"
+							confirmMessage="Confirmi arhivarea subcontractorilor selectati?"
+							variant="destructive"
+						/>
+					</div>
+					<div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+						{subcontractors.length > 0 ? (
+							<div className="grid gap-1 md:grid-cols-2">
+								{subcontractors.map((company) => (
+									<label
+										key={company.id}
+										className="flex items-center gap-2 text-sm text-[var(--muted-strong)]"
+									>
+										<input
+											type="checkbox"
+											name="ids"
+											value={company.id}
+											className="size-4"
+										/>
+										<span>{company.name}</span>
+									</label>
+								))}
+							</div>
+						) : (
+							<p className="text-sm text-[var(--muted)]">
+								Nu exista subcontractori activi pe pagina curenta pentru
+								arhivare.
+							</p>
+						)}
+					</div>
+				</form>
+			</details>
+		</Card>
+	);
+}
+
+function SubcontractorGrid({
+	subcontractors,
+}: {
+	subcontractors: SubcontractorRow[];
+}) {
+	return (
+		<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+			{subcontractors.map((company) => (
+				<Link
+					key={company.id}
+					href={`/subcontractori/${company.id}`}
+					className="block"
+				>
+					<Card className="space-y-3 transition-colors hover:border-[var(--border-strong)]">
+						<div className="flex items-center justify-between gap-3">
+							<div className="flex items-center gap-2">
+								{company.deletedAt ? (
+									<Badge tone="warning">Arhivat</Badge>
+								) : null}
+								<p className="font-semibold text-[var(--foreground)]">
+									{company.name}
+								</p>
+							</div>
+							<Badge tone={getStatusTone(company.approvalStatus)}>
+								{subcontractorStatusLabels[company.approvalStatus]}
+							</Badge>
+						</div>
+						<div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
+							<p>Contact: {company.contactName || "-"}</p>
+							<p>Email: {company.email || "-"}</p>
+							<p className="col-span-2">CUI: {company.cui || "-"}</p>
+							<p className="col-span-2">
+								Alocari active: {company.assignments.length}
+							</p>
+						</div>
+						{company.notes && (
+							<p className="text-xs text-[var(--muted)] line-clamp-2">
+								Nota: {company.notes}
+							</p>
+						)}
+						<p className="text-[11px] font-medium text-[var(--accent)]">
+							Deschide detalii →
+						</p>
+					</Card>
+				</Link>
+			))}
+		</div>
+	);
 }
 
 export default async function SubcontractoriPage({
-  searchParams,
+	searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string; dialog?: string; archived?: string }>;
+	searchParams: Promise<{
+		page?: string;
+		q?: string;
+		status?: string;
+		dialog?: string;
+		archived?: string;
+	}>;
 }) {
-  const params = await searchParams;
-  const query = params.q?.trim() || "";
-  const statusFilter = parseEnumParam(params.status, subcontractorStatusOptions);
-  const archivedFilter = parseEnumParam(params.archived, archiveVisibilityOptions) || "active";
-  const page = parsePositiveIntParam(params.page);
-  const pageSize = 12;
-  const createDialogOpen = params.dialog === "create";
-  const session = await auth();
-  const userContext = {
-    id: session?.user?.id || "",
-    email: session?.user?.email || null,
-    roleKeys: session?.user?.roleKeys || [],
-  };
-  const canCreate = hasPermission(userContext.roleKeys, "TASKS", "CREATE", userContext.email);
-  const canUpdate = hasPermission(userContext.roleKeys, "TASKS", "UPDATE", userContext.email);
-  const canDelete = hasPermission(userContext.roleKeys, "TASKS", "DELETE", userContext.email);
-  const scope = session?.user
-    ? await resolveAccessScope(userContext)
-    : { projectIds: null, teamId: null };
-  // We removed project-based filtering for subcontractors to allow Managers and Admin to see all collaborators in the catalog.
-  // const where: Prisma.SubcontractorWhereInput = { ...subcontractorScopeWhere(scope) };
-  const where: Prisma.SubcontractorWhereInput = {};
-  const andFilters: Prisma.SubcontractorWhereInput[] = [];
+	const params = await searchParams;
+	const query = params.q?.trim() || "";
+	const statusFilter =
+		parseEnumParam(params.status, subcontractorStatusOptions) ?? null;
+	const archivedFilter =
+		parseEnumParam(params.archived, archiveVisibilityOptions) || "active";
+	const page = parsePositiveIntParam(params.page);
+	const pageSize = 12;
+	const createDialogOpen = params.dialog === "create";
+	const session = await auth();
+	const userContext = {
+		id: session?.user?.id || "",
+		email: session?.user?.email || null,
+		roleKeys: session?.user?.roleKeys || [],
+	};
+	const canCreate = hasPermission(
+		userContext.roleKeys,
+		"TASKS",
+		"CREATE",
+		userContext.email,
+	);
+	const _canUpdate = hasPermission(
+		userContext.roleKeys,
+		"TASKS",
+		"UPDATE",
+		userContext.email,
+	);
+	const canDelete = hasPermission(
+		userContext.roleKeys,
+		"TASKS",
+		"DELETE",
+		userContext.email,
+	);
+	const scope = session?.user
+		? await resolveAccessScope(userContext)
+		: { projectIds: null, teamId: null };
+	const where: Prisma.SubcontractorWhereInput = {};
+	const andFilters: Prisma.SubcontractorWhereInput[] = [];
 
-  if (archivedFilter === "active") {
-    where.deletedAt = null;
-  } else if (archivedFilter === "archived") {
-    where.deletedAt = { not: null };
-  }
+	if (archivedFilter === "active") {
+		where.deletedAt = null;
+	} else if (archivedFilter === "archived") {
+		where.deletedAt = { not: null };
+	}
 
-  if (statusFilter) {
-    andFilters.push({ approvalStatus: statusFilter });
-  }
-  if (query) {
-    andFilters.push({
-      OR: [
-        { name: { contains: query, mode: "insensitive" } },
-        { cui: { contains: query, mode: "insensitive" } },
-        { contactName: { contains: query, mode: "insensitive" } },
-        { email: { contains: query, mode: "insensitive" } },
-        { phone: { contains: query, mode: "insensitive" } },
-        { notes: { contains: query, mode: "insensitive" } },
-      ],
-    });
-  }
+	if (statusFilter) {
+		andFilters.push({ approvalStatus: statusFilter });
+	}
+	if (query) {
+		andFilters.push({
+			OR: [
+				{ name: { contains: query, mode: "insensitive" } },
+				{ cui: { contains: query, mode: "insensitive" } },
+				{ contactName: { contains: query, mode: "insensitive" } },
+				{ email: { contains: query, mode: "insensitive" } },
+				{ phone: { contains: query, mode: "insensitive" } },
+				{ notes: { contains: query, mode: "insensitive" } },
+			],
+		});
+	}
 
-  const filteredWhere = andFilters.length > 0 ? { ...where, AND: andFilters } : where;
-  const scopedProjectIds = scope.projectIds && scope.projectIds.length > 0 ? scope.projectIds : ["__none__"];
-  const assignmentProjectFilter =
-    scope.projectIds === null ? {} : { projectId: { in: scopedProjectIds } };
-  const [totalSubcontractors, statusBreakdown, activeAssignmentsTotal] = await Promise.all([
-    prisma.subcontractor.count({ where: filteredWhere }),
-    prisma.subcontractor.groupBy({
-      by: ["approvalStatus"],
-      where: filteredWhere,
-      _count: { _all: true },
-    }),
-    prisma.subcontractorAssignment.count({
-      where: {
-        status: AssignmentStatus.ACTIV,
-        ...assignmentProjectFilter,
-        subcontractor: filteredWhere,
-      },
-    }),
-  ]);
-  const statusCountByKey = new Map<SubcontractorApprovalStatus, number>(
-    statusBreakdown.map((item) => [item.approvalStatus, item._count._all]),
-  );
-  const { totalPages, currentPage, skip, take } = resolvePagination({
-    page,
-    totalItems: totalSubcontractors,
-    pageSize,
-  });
-  const subcontractors = await prisma.subcontractor.findMany({
-    where: filteredWhere,
-    select: {
-      id: true,
-      name: true,
-      approvalStatus: true,
-      contactName: true,
-      email: true,
-      phone: true,
-      cui: true,
-      notes: true,
-      deletedAt: true,
-      updatedAt: true,
-      assignments: {
-        where: {
-          status: AssignmentStatus.ACTIV,
-          ...assignmentProjectFilter,
-        },
-        select: { id: true },
-      },
-    },
-    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
-    skip,
-    take,
-  });
-  const hasFilters = Boolean(query || statusFilter || archivedFilter !== "active");
-  const activeSubcontractorsOnPage = subcontractors.filter((company) => !company.deletedAt);
-  const createHref = buildSubcontractoriHref({ page: currentPage, q: query, status: statusFilter, archived: archivedFilter, dialog: "create" });
-  const closeHref = buildSubcontractoriHref({ page: currentPage, q: query, status: statusFilter, archived: archivedFilter });
-  const prevHref = currentPage > 1 ? buildSubcontractoriHref({ page: currentPage - 1, q: query, status: statusFilter, archived: archivedFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
-  const nextHref = currentPage < totalPages ? buildSubcontractoriHref({ page: currentPage + 1, q: query, status: statusFilter, archived: archivedFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
+	const filteredWhere =
+		andFilters.length > 0 ? { ...where, AND: andFilters } : where;
+	const scopedProjectIds =
+		scope.projectIds && scope.projectIds.length > 0
+			? scope.projectIds
+			: ["__none__"];
+	const assignmentProjectFilter =
+		scope.projectIds === null ? {} : { projectId: { in: scopedProjectIds } };
+	const [totalSubcontractors, statusBreakdown, activeAssignmentsTotal] =
+		await Promise.all([
+			prisma.subcontractor.count({ where: filteredWhere }),
+			prisma.subcontractor.groupBy({
+				by: ["approvalStatus"],
+				where: filteredWhere,
+				_count: { _all: true },
+			}),
+			prisma.subcontractorAssignment.count({
+				where: {
+					status: AssignmentStatus.ACTIV,
+					...assignmentProjectFilter,
+					subcontractor: filteredWhere,
+				},
+			}),
+		]);
+	const statusCountByKey = new Map<SubcontractorApprovalStatus, number>(
+		statusBreakdown.map((item) => [item.approvalStatus, item._count._all]),
+	);
+	const { totalPages, currentPage, skip, take } = resolvePagination({
+		page,
+		totalItems: totalSubcontractors,
+		pageSize,
+	});
+	const subcontractors = (await prisma.subcontractor.findMany({
+		where: filteredWhere,
+		select: {
+			id: true,
+			name: true,
+			approvalStatus: true,
+			contactName: true,
+			email: true,
+			phone: true,
+			cui: true,
+			notes: true,
+			deletedAt: true,
+			updatedAt: true,
+			assignments: {
+				where: { status: AssignmentStatus.ACTIV, ...assignmentProjectFilter },
+				select: { id: true },
+			},
+		},
+		orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+		skip,
+		take,
+	})) as SubcontractorRow[];
+	const hasFilters = Boolean(
+		query || statusFilter || archivedFilter !== "active",
+	);
+	const activeSubcontractorsOnPage = subcontractors.filter(
+		(company) => !company.deletedAt,
+	);
+	const createHref = buildSubcontractoriHref({
+		page: currentPage,
+		q: query,
+		status: statusFilter,
+		archived: archivedFilter,
+		dialog: "create",
+	});
+	const closeHref = buildSubcontractoriHref({
+		page: currentPage,
+		q: query,
+		status: statusFilter,
+		archived: archivedFilter,
+	});
+	const prevHref =
+		currentPage > 1
+			? buildSubcontractoriHref({
+					page: currentPage - 1,
+					q: query,
+					status: statusFilter,
+					archived: archivedFilter,
+					dialog: createDialogOpen ? "create" : undefined,
+				})
+			: null;
+	const nextHref =
+		currentPage < totalPages
+			? buildSubcontractoriHref({
+					page: currentPage + 1,
+					q: query,
+					status: statusFilter,
+					archived: archivedFilter,
+					dialog: createDialogOpen ? "create" : undefined,
+				})
+			: null;
 
-  return (
-    <PermissionGuard resource="TASKS" action="VIEW">
-      <div className="page-stack">
-        <PageHeader
-          title="Subcontractori"
-          subtitle="Administrare subcontractori: conformitate, date comerciale, status aprobare si alocari active pe proiecte."
-          actions={
-            canCreate ? (
-              <Link href={createHref}>
-                <Button>Adauga subcontractor</Button>
-              </Link>
-            ) : null
-          }
-        />
-
-        <Card>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">{totalSubcontractors} subcontractori gasiti</Badge>
-            {hasFilters ? <Badge tone="info">Filtru activ</Badge> : <Badge tone="success">Fara filtre</Badge>}
-          </div>
-          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto]">
-            <form method="get" action="/subcontractori" className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto] lg:col-span-2">
-              <input type="hidden" name="page" value="1" />
-              <Input name="q" defaultValue={query} placeholder="Cauta dupa nume, CUI, contact, email, telefon sau nota" />
-              <select
-                name="status"
-                defaultValue={statusFilter || ""}
-                className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
-              >
-                <option value="">Toate statusurile</option>
-                {subcontractorStatusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {subcontractorStatusLabels[status]}
-                  </option>
-                ))}
-              </select>
-              <select
-                name="archived"
-                defaultValue={archivedFilter}
-                className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
-              >
-                {archiveVisibilityOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {archiveVisibilityLabels[option]}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" variant="secondary" className="w-full lg:w-auto">
-                Aplica filtre
-              </Button>
-            </form>
-            {hasFilters ? (
-              <form method="get" action="/subcontractori" className="lg:self-end">
-                <Button type="submit" variant="ghost" className="w-full lg:w-auto">
-                  Reseteaza
-                </Button>
-              </form>
-            ) : null}
-          </div>
-        </Card>
-
-        {canCreate && createDialogOpen ? (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(7,12,18,0.74)] p-3 sm:items-center sm:p-6">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="subcontractor-create-title"
-              className="w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-panel)]"
-            >
-              <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-5">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Creare subcontractor</p>
-                  <h2 id="subcontractor-create-title" className="mt-1 text-lg font-semibold text-[var(--foreground)]">
-                    Adauga subcontractor
-                  </h2>
-                  <p className="mt-1 text-sm text-[var(--muted)]">
-                    Formularul este deschis intr-un dialog pentru a pastra contextul listei si filtrul curent.
-                  </p>
-                </div>
-                <Link href={closeHref}>
-                  <Button variant="ghost" size="sm" aria-label="Inchide formularul">
-                    Inchide
-                  </Button>
-                </Link>
-              </div>
-              <div className="max-h-[80vh] overflow-y-auto px-4 py-4 sm:px-5">
-                <SubcontractorCreateForm />
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {canDelete ? (
-          <Card className="bulk-zone">
-            <details>
-              <summary>Actiuni bulk subcontractori</summary>
-              <form action={bulkArchiveSubcontractorsAction} className="mt-3 space-y-3">
-                <div className="bulk-controls flex flex-wrap items-center gap-2">
-                  <Badge tone="warning">Arhivare soft delete</Badge>
-                  <ConfirmSubmitButton
-                    text="Arhiveaza selectia"
-                    confirmMessage="Confirmi arhivarea subcontractorilor selectati?"
-                    variant="destructive"
-                  />
-                </div>
-                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  {activeSubcontractorsOnPage.length > 0 ? (
-                    <div className="grid gap-1 md:grid-cols-2">
-                      {activeSubcontractorsOnPage.map((company) => (
-                        <label key={company.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
-                          <input type="checkbox" name="ids" value={company.id} className="h-4 w-4" />
-                          <span>{company.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[var(--muted)]">Nu exista subcontractori activi pe pagina curenta pentru arhivare.</p>
-                  )}
-                </div>
-              </form>
-            </details>
-          </Card>
-        ) : null}
-
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Companii active</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{totalSubcontractors}</p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Aprobate</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
-              {statusCountByKey.get("APROBAT") || 0}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">In verificare</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
-              {statusCountByKey.get("IN_VERIFICARE") || 0}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Alocari active</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{activeAssignmentsTotal}</p>
-          </Card>
-        </section>
-
-        {subcontractors.length === 0 ? (
-          <EmptyState
-            title={hasFilters ? "Nu exista subcontractori care sa corespunda filtrelor" : "Nu exista subcontractori vizibili in aria ta"}
-            description={
-              hasFilters
-                ? "Sterge filtrele sau schimba criteriile de cautare pentru alte rezultate."
-                : "Adauga un subcontractor nou sau extinde aria de acces pentru a vedea alocarile existente."
-            }
-          />
-        ) : null}
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {subcontractors.map((company) => (
-            <Link key={company.id} href={`/subcontractori/${company.id}`} className="block">
-              <Card className="space-y-3 transition-colors hover:border-[var(--border-strong)]">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {company.deletedAt ? <Badge tone="warning">Arhivat</Badge> : null}
-                    <p className="font-semibold text-[var(--foreground)]">{company.name}</p>
-                  </div>
-                  <Badge tone={getStatusTone(company.approvalStatus)}>{subcontractorStatusLabels[company.approvalStatus]}</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
-                  <p>Contact: {company.contactName || "-"}</p>
-                  <p>Email: {company.email || "-"}</p>
-                  <p className="col-span-2">CUI: {company.cui || "-"}</p>
-                  <p className="col-span-2">Alocari active: {company.assignments.length}</p>
-                </div>
-                {company.notes && (
-                  <p className="text-xs text-[var(--muted)] line-clamp-2">Nota: {company.notes}</p>
-                )}
-                <p className="text-[11px] font-medium text-[var(--accent)]">
-                  Deschide detalii →
-                </p>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
-          <span>
-            Pagina {currentPage} din {totalPages}
-          </span>
-          <div className="flex gap-2">
-            {prevHref ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={prevHref}>
-                Anterior
-              </Link>
-            ) : null}
-            {nextHref ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={nextHref}>
-                Urmator
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </PermissionGuard>
-  );
+	return (
+		<PermissionGuard resource="TASKS" action="VIEW">
+			<div className="page-stack">
+				<PageHeader
+					title="Subcontractori"
+					subtitle="Administrare subcontractori: conformitate, date comerciale, status aprobare si alocari active pe proiecte."
+					actions={
+						canCreate ? (
+							<Link href={createHref}>
+								<Button>Adauga subcontractor</Button>
+							</Link>
+						) : null
+					}
+				/>
+				<SubcontractorFiltersCard
+					totalSubcontractors={totalSubcontractors}
+					hasFilters={hasFilters}
+					query={query}
+					statusFilter={statusFilter}
+					archivedFilter={archivedFilter}
+				/>
+				{canCreate && createDialogOpen ? (
+					<SubcontractorCreateDialog
+						createHref={createHref}
+						closeHref={closeHref}
+					/>
+				) : null}
+				<BulkActionsCard
+					subcontractors={activeSubcontractorsOnPage}
+					canDelete={canDelete}
+				/>
+				<section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+					<Card>
+						<p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">
+							Companii active
+						</p>
+						<p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+							{totalSubcontractors}
+						</p>
+					</Card>
+					<Card>
+						<p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">
+							Aprobate
+						</p>
+						<p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+							{statusCountByKey.get("APROBAT") || 0}
+						</p>
+					</Card>
+					<Card>
+						<p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">
+							In verificare
+						</p>
+						<p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+							{statusCountByKey.get("IN_VERIFICARE") || 0}
+						</p>
+					</Card>
+					<Card>
+						<p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">
+							Alocari active
+						</p>
+						<p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+							{activeAssignmentsTotal}
+						</p>
+					</Card>
+				</section>
+				{subcontractors.length === 0 ? (
+					<EmptyState
+						title={
+							hasFilters
+								? "Nu exista subcontractori care sa corespunda filtrelor"
+								: "Nu exista subcontractori vizibili in aria ta"
+						}
+						description={
+							hasFilters
+								? "Sterge filtrele sau schimba criteriile de cautare pentru alte rezultate."
+								: "Adauga un subcontractor nou sau extinde aria de acces pentru a vedea alocarile existente."
+						}
+					/>
+				) : null}
+				<SubcontractorGrid subcontractors={subcontractors} />
+				<div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
+					<span>
+						Pagina {currentPage} din {totalPages}
+					</span>
+					<div className="flex gap-2">
+						{prevHref ? (
+							<Link
+								className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]"
+								href={prevHref}
+							>
+								Anterior
+							</Link>
+						) : null}
+						{nextHref ? (
+							<Link
+								className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]"
+								href={nextHref}
+							>
+								Urmator
+							</Link>
+						) : null}
+					</div>
+				</div>
+			</div>
+		</PermissionGuard>
+	);
 }
