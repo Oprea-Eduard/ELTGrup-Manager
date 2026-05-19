@@ -10,7 +10,7 @@ const ProfitabilityChartInner = dynamic(
 	{
 		ssr: false,
 		loading: () => (
-			<div className="h-[400px] w-full animate-pulse rounded-lg bg-[var(--surface-card)]" />
+			<div className="h-[400px] w-full rounded-[var(--radius-sm)] bg-[var(--border)]" />
 		),
 	},
 );

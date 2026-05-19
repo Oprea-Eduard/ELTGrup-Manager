@@ -1,5 +1,4 @@
 import { Slot } from "@radix-ui/react-slot";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 
 export interface ButtonProps
@@ -12,19 +11,19 @@ export interface ButtonProps
 
 const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
 	sm: "h-8 px-3 text-xs gap-1.5",
-	default: "h-10 px-4 text-sm gap-2 sm:h-11",
-	lg: "h-12 px-6 text-sm gap-2",
+	default: "h-10 px-6 text-sm gap-2 sm:h-11",
+	lg: "h-12 px-8 text-sm gap-2",
 	icon: "h-10 w-10 sm:h-11 sm:w-11 justify-center p-0",
 };
 
 const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
 	default:
-		"bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)] active:brightness-90",
+		"bg-[var(--text-display)] text-[var(--black)] hover:opacity-90",
 	secondary:
-		"border border-[var(--border)] bg-[var(--surface-1)] text-[var(--foreground)] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)]",
+		"border border-[var(--border-visible)] text-[var(--text-primary)] hover:border-[var(--text-display)]",
 	ghost:
-		"text-[var(--muted-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
-	destructive: "bg-[var(--status-blocked)] text-white hover:opacity-90",
+		"text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+	destructive: "border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]",
 };
 
 export function Button({
@@ -45,8 +44,8 @@ export function Button({
 			type={asChild ? undefined : type}
 			disabled={disabled || loading}
 			className={cn(
-				"inline-flex items-center rounded-[var(--radius-md)] font-medium transition-all duration-100",
-				"active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+				"inline-flex items-center rounded-[var(--radius-pill)] font-mono text-[13px] uppercase tracking-[0.06em] font-normal transition-all duration-100",
+				"disabled:pointer-events-none disabled:opacity-50",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
 				sizeStyles[size],
 				variantStyles[variant],
@@ -55,7 +54,9 @@ export function Button({
 			)}
 			{...props}
 		>
-			{loading && <Loader2 className="size-4 animate-spin" />}
+			{loading && (
+				<span className="inline-block size-3.5 rounded-full border border-current border-r-transparent animate-spin" />
+			)}
 			{children}
 		</Comp>
 	);

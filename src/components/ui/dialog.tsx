@@ -54,7 +54,7 @@ function DialogContent({
 						exit={{ opacity: 0, scale: 0.95 }}
 						transition={{ duration: 0.15, ease: "easeOut" }}
 						className={cn(
-							"fixed left-[50%] top-[10%] z-50 mx-auto w-full max-w-lg -translate-x-1/2 gap-4 border border-[var(--border)] bg-[var(--background)] p-6 shadow-lg sm:rounded-lg max-h-[80vh] overflow-y-auto",
+							"fixed left-[50%] top-[10%] z-50 mx-auto w-full max-w-lg -translate-x-1/2 gap-4 border border-[var(--border-visible)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-xl)] max-h-[80vh] overflow-y-auto",
 							className,
 						)}
 					>
@@ -77,7 +77,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
 	<div
 		className={cn(
-			"flex flex-col space-y-1.5 text-center sm:text-left",
+			"flex flex-col space-y-1.5",
 			className,
 		)}
 		{...props}
@@ -110,7 +110,7 @@ function DialogTitle({
 		<DialogPrimitive.Title
 			ref={ref}
 			className={cn(
-				"text-lg font-semibold leading-none tracking-tight",
+				"text-lg font-medium tracking-tight text-[var(--text-display)]",
 				className,
 			)}
 			{...props}
@@ -129,7 +129,7 @@ function DialogDescription({
 	return (
 		<DialogPrimitive.Description
 			ref={ref}
-			className={cn("text-sm text-[var(--muted)]", className)}
+			className={cn("text-sm text-[var(--text-secondary)]", className)}
 			{...props}
 		/>
 	);

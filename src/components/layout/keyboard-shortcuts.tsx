@@ -3,17 +3,17 @@
 import { useEffect, useState } from "react";
 
 const shortcuts: Record<string, { href: string; label: string }> = {
-	p: { href: "/proiecte", label: "Proiecte" },
-	l: { href: "/lucrari", label: "Lucrari" },
-	c: { href: "/clienti", label: "Clienti" },
-	f: { href: "/financiar", label: "Financiar" },
-	o: { href: "/oferte", label: "Oferte" },
-	m: { href: "/materiale", label: "Materiale" },
-	d: { href: "/documente", label: "Documente" },
-	e: { href: "/echipe", label: "Echipe" },
-	t: { href: "/pontaj", label: "Pontaj" },
-	n: { href: "/notificari", label: "Notificari" },
-	s: { href: "/setari", label: "Setari" },
+	p: { href: "/proiecte", label: "PROIECTE" },
+	l: { href: "/lucrari", label: "LUCRARI" },
+	c: { href: "/clienti", label: "CLIENTI" },
+	f: { href: "/financiar", label: "FINANCIAR" },
+	o: { href: "/oferte", label: "OFERTE" },
+	m: { href: "/materiale", label: "MATERIALE" },
+	d: { href: "/documente", label: "DOCUMENTE" },
+	e: { href: "/echipe", label: "ECHIPE" },
+	t: { href: "/pontaj", label: "PONTAJ" },
+	n: { href: "/notificari", label: "NOTIFICARI" },
+	s: { href: "/setari", label: "SETARI" },
 };
 
 export function KeyboardShortcuts({ enabled = true }: { enabled?: boolean }) {
@@ -51,7 +51,7 @@ export function KeyboardShortcuts({ enabled = true }: { enabled?: boolean }) {
 
 	return showHelp ? (
 		<div
-			className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+			className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
 			onClick={() => setShowHelp(false)}
 			onKeyDown={(e) => {
 				if (e.key === "Escape") setShowHelp(false);
@@ -60,42 +60,42 @@ export function KeyboardShortcuts({ enabled = true }: { enabled?: boolean }) {
 			aria-modal="true"
 		>
 			<div
-				className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5 shadow-2xl"
+				className="w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--border-visible)] bg-[var(--surface)] p-5"
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => e.stopPropagation()}
 				role="dialog"
 				aria-modal="true"
 				aria-label="Scurtaturi de tastatura"
 			>
-				<h2 className="mb-4 text-sm font-semibold text-[var(--foreground)]">
-					Scurtaturi de tastatura
+				<h2 className="mb-4 font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-display)]">
+					SCURTATURI TASTATURA
 				</h2>
 				<div className="space-y-2">
 					{Object.entries(shortcuts).map(([key, { label }]) => (
 						<div key={key} className="flex items-center justify-between">
-							<span className="text-sm text-[var(--muted-strong)]">
+							<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
 								{label}
 							</span>
-							<kbd className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--muted)]">
+							<kbd className="rounded-[var(--radius-sm)] border border-[var(--border-visible)] bg-[var(--surface-raised)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-secondary)]">
 								{key.toUpperCase()}
 							</kbd>
 						</div>
 					))}
 					<div className="mt-4 flex items-center justify-between border-t border-[var(--border)] pt-3">
-						<span className="text-sm text-[var(--muted-strong)]">
-							Ajutor scurtaturi
+						<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
+							AJUTOR SCURTATURI
 						</span>
-						<kbd className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--muted)]">
+						<kbd className="rounded-[var(--radius-sm)] border border-[var(--border-visible)] bg-[var(--surface-raised)] px-2 py-0.5 font-mono text-[11px] text-[var(--text-secondary)]">
 							?
 						</kbd>
 					</div>
 				</div>
 				<button
 					type="button"
-					className="mt-4 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] py-2 text-sm font-medium text-[var(--muted-strong)] hover:bg-[var(--surface-2)]"
+					className="mt-4 w-full rounded-[var(--radius-pill)] border border-[var(--border-visible)] py-2 font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-primary)] hover:border-[var(--text-display)]"
 					onClick={() => setShowHelp(false)}
 				>
-					Inchide
+					INCHIDE
 				</button>
 			</div>
 		</div>

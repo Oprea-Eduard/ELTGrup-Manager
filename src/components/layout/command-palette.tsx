@@ -43,42 +43,42 @@ export function GlobalCommandPalette() {
 		() => [
 			{
 				id: "proiecte",
-				title: "Proiecte",
-				subtitle: "Vezi toate proiectele active",
+				title: "PROIECTE",
+				subtitle: "VEZI TOATE PROIECTELE ACTIVE",
 				icon: <Folder className="size-4" />,
-				category: "Navigare",
+				category: "NAVIGARE",
 				onSelect: () => push("/proiecte"),
 			},
 			{
 				id: "lucrari",
-				title: "Lucrări",
-				subtitle: "Gestionează ordinele de lucru",
+				title: "LUCRARI",
+				subtitle: "GESTIONEAZA ORDINELE DE LUCRU",
 				icon: <FileText className="size-4" />,
-				category: "Navigare",
+				category: "NAVIGARE",
 				onSelect: () => push("/lucrari"),
 			},
 			{
 				id: "clienti",
-				title: "Clienți",
-				subtitle: "Baza de date clienți",
+				title: "CLIENTI",
+				subtitle: "BAZA DE DATE CLIENTI",
 				icon: <Users className="size-4" />,
-				category: "Navigare",
+				category: "NAVIGARE",
 				onSelect: () => push("/clienti"),
 			},
 			{
 				id: "calendar",
-				title: "Calendar",
-				subtitle: "Programări și termene limită",
+				title: "CALENDAR",
+				subtitle: "PROGRAMARI SI TERMENE",
 				icon: <CalendarIcon className="size-4" />,
-				category: "Navigare",
+				category: "NAVIGARE",
 				onSelect: () => push("/calendar"),
 			},
 			{
 				id: "setari",
-				title: "Setări",
-				subtitle: "Configurare sistem și profil",
+				title: "SETARI",
+				subtitle: "CONFIGURARE SISTEM SI PROFIL",
 				icon: <Settings className="size-4" />,
-				category: "Sistem",
+				category: "SISTEM",
 				onSelect: () => push("/setari"),
 			},
 		],
@@ -97,25 +97,25 @@ export function GlobalCommandPalette() {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="max-w-2xl overflow-hidden p-0 shadow-2xl">
-				<DialogTitle className="sr-only">Comandă Globală</DialogTitle>
+			<DialogContent className="max-w-2xl overflow-hidden p-0">
+				<DialogTitle className="sr-only">COMANDA GLOBALA</DialogTitle>
 				<div className="flex items-center border-b border-[var(--border)] px-4 py-3">
-					<Search className="mr-3 size-5 text-[var(--muted-strong)]" />
+					<Search className="mr-3 size-5 text-[var(--text-secondary)]" />
 					<input
-						placeholder="Ce dorești să cauți? (proiecte, clienți, setări...)"
-						className="flex-1 bg-transparent text-lg outline-none placeholder:text-[var(--muted)]"
+						placeholder="CE DORESTI SA CAUTI?"
+						className="flex-1 bg-transparent font-mono text-[13px] uppercase tracking-[0.06em] outline-none placeholder:text-[var(--text-disabled)]"
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 					/>
-					<div className="flex items-center gap-1 rounded-md border border-[var(--border)] bg-[rgba(15,24,34,0.5)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-strong)]">
-						<span>ESC</span>
+					<div className="flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--border-visible)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+						<span>[ESC]</span>
 					</div>
 				</div>
 
 				<div className="max-h-[400px] overflow-y-auto p-2">
 					{filteredCommands.length === 0 ? (
-						<div className="px-4 py-12 text-center text-[var(--muted)]">
-							Nu am găsit niciun rezultat pentru &quot;{query}&quot;
+						<div className="px-4 py-12 text-center font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+							NU AM GASIT NICIUN REZULTAT PENTRU &quot;{query}&quot;
 						</div>
 					) : (
 						Object.entries(
@@ -129,7 +129,7 @@ export function GlobalCommandPalette() {
 							),
 						).map(([category, items]) => (
 							<div key={category} className="mb-2 last:mb-0">
-								<div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted-strong)]">
+								<div className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-disabled)]">
 									{category}
 								</div>
 								{items.map((item) => (
@@ -140,15 +140,17 @@ export function GlobalCommandPalette() {
 											item.onSelect();
 											setOpen(false);
 										}}
-										className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-[rgba(116,162,212,0.1)] group"
+										className="flex w-full items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-left transition hover:bg-[var(--surface-raised)] group"
 									>
-										<div className="flex size-8 items-center justify-center rounded-md border border-[var(--border)] bg-[rgba(15,24,34,0.8)] text-[var(--muted)] group-hover:border-[rgba(116,162,212,0.3)] group-hover:text-[var(--foreground)]">
+										<div className="flex size-8 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-visible)] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
 											{item.icon}
 										</div>
 										<div>
-											<div className="text-sm font-medium">{item.title}</div>
+											<div className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
+												{item.title}
+											</div>
 											{item.subtitle && (
-												<div className="text-xs text-[var(--muted)]">
+												<div className="font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
 													{item.subtitle}
 												</div>
 											)}
@@ -160,22 +162,22 @@ export function GlobalCommandPalette() {
 					)}
 				</div>
 
-				<div className="flex items-center justify-between border-t border-[var(--border)] bg-[rgba(15,24,34,0.3)] px-4 py-2.5 text-[11px] text-[var(--muted-strong)]">
+				<div className="flex items-center justify-between border-t border-[var(--border)] px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
 					<div className="flex gap-4">
 						<span className="flex items-center gap-1">
-							<kbd className="rounded border border-[var(--border)] bg-[rgba(15,24,34,0.5)] px-1">
-								↑↓
+							<kbd className="rounded-[var(--radius-sm)] border border-[var(--border-visible)] px-1">
+								[↑↓]
 							</kbd>{" "}
-							Navigare
+							NAVIGARE
 						</span>
 						<span className="flex items-center gap-1">
-							<kbd className="rounded border border-[var(--border)] bg-[rgba(15,24,34,0.5)] px-1">
-								↵
+							<kbd className="rounded-[var(--radius-sm)] border border-[var(--border-visible)] px-1">
+								[↵]
 							</kbd>{" "}
-							Selectare
+							SELECTARE
 						</span>
 					</div>
-					<span>Comandă Globală</span>
+					<span>COMANDA GLOBALA</span>
 				</div>
 			</DialogContent>
 		</Dialog>

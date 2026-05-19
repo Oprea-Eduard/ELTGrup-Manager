@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/src/lib/utils";
 
-/**
- * Consistent page section with optional title and action slot.
- * Replaces the pattern of wrapping everything in <Card> with a label.
- */
 export function Section({
 	title,
 	description,
@@ -24,12 +20,14 @@ export function Section({
 				<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						{title && (
-							<h2 className="text-base font-semibold text-[var(--heading)]">
+							<h2 className="text-base font-medium text-[var(--text-display)]">
 								{title}
 							</h2>
 						)}
 						{description && (
-							<p className="text-sm text-[var(--muted)]">{description}</p>
+							<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+								{description}
+							</p>
 						)}
 					</div>
 					{actions && (

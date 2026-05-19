@@ -41,78 +41,44 @@ function getPrimaryRole(roleKeys: string[]) {
 
 const roleExperience: Record<RoleKey, { subtitle: string; focus: string[] }> = {
 	SUPER_ADMIN: {
-		subtitle:
-			"Control global: risc operational, marja, cashflow si blocaje critice",
-		focus: [
-			"Revizuieste analiticele si facturile restante.",
-			"Intervine pe proiectele cu lucrari intarziate.",
-		],
+		subtitle: "CONTROL GLOBAL: RISC, MARJA, CASHFLOW SI BLOCAJE",
+		focus: ["REVIZUIESTE ANALITICELE", "INTERVINE PE PROIECTE INTARZIATE"],
 	},
 	ADMINISTRATOR: {
-		subtitle:
-			"Coordonare executie: proiecte active, alocare echipe, aprobari materiale",
-		focus: [
-			"Confirma cererile de materiale ramase in asteptare.",
-			"Verifica lucrarile care depasesc termenul.",
-		],
+		subtitle: "COORDONARE EXECUTIE: PROIECTE, ECHIPE, APROBARI",
+		focus: ["CONFIRMA CERERILE MATERIALE", "VERIFICA LUCRARILE INTARZIATE"],
 	},
 	MAGAZIONER: {
-		subtitle: "Gestiune inventar: scule, materiale, intrari/iesiri depozit",
-		focus: [
-			"Verifica cererile de materiale noi.",
-			"Inregistreaza retururile de scule de pe teren.",
-		],
+		subtitle: "GESTIUNE INVENTAR: SCULE, MATERIALE, DEPOZIT",
+		focus: ["VERIFICA CERERILE NOI", "INREGISTREAZA RETURURILE"],
 	},
 	PROJECT_MANAGER: {
-		subtitle: "Management proiect: termene, progres, consum materiale, buget",
-		focus: [
-			"Compara orele pontate cu orele estimate.",
-			"Urmareste costurile fata de bugetul proiectului.",
-		],
+		subtitle: "MANAGEMENT PROIECT: TERMENE, PROGRES, COSTURI",
+		focus: ["COMPARA ORELE PONTATE CU ESTIMARILE", "URMARESTE BUGETUL"],
 	},
 	SITE_MANAGER: {
-		subtitle: "Executie santier: taskuri zilnice, pontaj live, blocaje teren",
-		focus: [
-			"Actualizeaza rapid rapoartele din teren.",
-			"Escaladeaza imediat lucrarile blocate.",
-		],
+		subtitle: "EXECUTIE SANTIER: TASKURI, PONTAJ, BLOCAJE",
+		focus: ["ACTUALIZEAZA RAPOARTELE", "ESCALADEAZA LUCRARILE BLOCATE"],
 	},
 	BACKOFFICE: {
-		subtitle:
-			"Operatiuni suport: documente, taskuri administrative, fluxuri materiale",
-		focus: [
-			"Asigura completitudinea documentelor de proiect.",
-			"Curata cererile materiale blocate in asteptare.",
-		],
+		subtitle: "OPERATIUNI SUPORT: DOCUMENTE, TASKURI, MATERIALE",
+		focus: ["ASIGURA COMPLETITUDINEA DOCUMENTELOR", "CURA CERERILE MATERIALE"],
 	},
 	ACCOUNTANT: {
-		subtitle:
-			"Control financiar: costuri proiect, facturare, plati si restante",
-		focus: [
-			"Verifica costurile nou inregistrate.",
-			"Urmareste facturile scadente si soldul neincasat.",
-		],
+		subtitle: "CONTROL FINANCIAR: COSTURI, FACTURARE, PLATI",
+		focus: ["VERIFICA COSTURILE NOI", "URMARESTE FACTURILE SCADENTE"],
 	},
 	WORKER: {
-		subtitle: "Executie personala: lucrari alocate, pontaj, update progres",
-		focus: [
-			"Porneste/opreste pontajul pe lucrarile curente.",
-			"Trimite update teren cu blocajele de azi.",
-		],
+		subtitle: "EXECUTIE PERSONALA: LUCRARI, PONTAJ, PROGRES",
+		focus: ["PORNESTE/OPRESTE PONTAJUL", "TRIMITE UPDATE TEREN"],
 	},
 	CLIENT_VIEWER: {
-		subtitle: "Vizibilitate client: progres, documente relevante, rapoarte",
-		focus: [
-			"Consulta timeline-ul proiectelor alocate.",
-			"Verifica ultimele rapoarte si documente publice.",
-		],
+		subtitle: "VIZIBILITATE CLIENT: PROGRES, DOCUMENTE, RAPOARTE",
+		focus: ["CONSULTA TIMELINE-UL", "VERIFICA ULTIMELE RAPOARTE"],
 	},
 	SUBCONTRACTOR: {
-		subtitle: "Executie subcontractor: taskuri alocate, livrabile si documente",
-		focus: [
-			"Actualizeaza taskurile proprii.",
-			"Incarca dovada de executie in documente.",
-		],
+		subtitle: "EXECUTIE SUBCONTRACTOR: TASKURI, LIVRABILE",
+		focus: ["ACTUALIZEAZA TASKURILE", "INCADRCA DOVADA DE EXECUTIE"],
 	},
 };
 
@@ -151,37 +117,37 @@ function KpiStrip({ d }: { d: DashboardData }) {
 	return (
 		<section className="page-kpis">
 			<KpiCard
-				label="Proiecte active"
+				label="PROIECTE ACTIVE"
 				value={String(d.activeProjects)}
-				helper="in executie"
+				helper="IN EXECUTIE"
 				severity="info"
 				href="/proiecte"
 			/>
 			<KpiCard
-				label="Lucrari intarziate"
+				label="LUCRARI INTARZIATE"
 				value={String(d.delayedTasks)}
-				helper="necesita interventie"
+				helper="NECESITA INTERVENTIE"
 				severity={d.delayedTasks > 0 ? "blocked" : "active"}
 				href="/lucrari"
 			/>
 			<KpiCard
-				label="Pontaje active"
+				label="PONTAJE ACTIVE"
 				value={String(d.clockedIn)}
-				helper="echipe in teren"
+				helper="ECHIPE IN TEREN"
 				severity="active"
 				href="/pontaj"
 			/>
 			<KpiCard
-				label="Cereri materiale"
+				label="CERERI MATERIALE"
 				value={String(d.pendingMaterialApprovals)}
-				helper="in asteptare"
+				helper="IN ASTEPTARE"
 				severity={d.pendingMaterialApprovals > 0 ? "pending" : "done"}
 				href="/materiale"
 			/>
 			<KpiCard
-				label="Creante neincasate"
+				label="CREANTE NEINCASATE"
 				value={formatCurrency(receivables)}
-				helper="expunere curenta"
+				helper="EXPUNERE CURENTA"
 				severity={receivables > 0 ? "pending" : "done"}
 				href="/financiar"
 			/>
@@ -198,45 +164,44 @@ function ActionQueue({ d }: { d: DashboardData }) {
 		return null;
 	return (
 		<Card className="space-y-2" rail="alert">
-			<p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-				Necesita atentie
+			<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+				NECESITA ATENTIE
 			</p>
 			<div className="space-y-1.5">
 				{d.delayedTasks > 0 && (
 					<Link
 						href="/lucrari"
-						className="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]"
+						className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-raised)]"
 					>
-						<AlertTriangle className="size-4 shrink-0 text-[var(--status-blocked)]" />
-						<span className="text-[var(--foreground)]">
-							<strong>{d.delayedTasks}</strong> lucrari depasesc termenul
+						<AlertTriangle className="size-4 shrink-0 text-[var(--accent)]" />
+						<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
+							[{d.delayedTasks}] LUCRARI DEPASESC TERMENUL
 						</span>
-						<ArrowRight className="ml-auto size-3.5 text-[var(--muted)]" />
+						<ArrowRight className="ml-auto size-3.5 text-[var(--text-secondary)]" />
 					</Link>
 				)}
 				{d.pendingMaterialApprovals > 0 && (
 					<Link
 						href="/materiale"
-						className="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]"
+						className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-raised)]"
 					>
-						<Package className="size-4 shrink-0 text-[var(--status-pending)]" />
-						<span className="text-[var(--foreground)]">
-							<strong>{d.pendingMaterialApprovals}</strong> cereri materiale de
-							aprobat
+						<Package className="size-4 shrink-0 text-[var(--warning)]" />
+						<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
+							[{d.pendingMaterialApprovals}] CERERI MATERIALE DE APROBAT
 						</span>
-						<ArrowRight className="ml-auto size-3.5 text-[var(--muted)]" />
+						<ArrowRight className="ml-auto size-3.5 text-[var(--text-secondary)]" />
 					</Link>
 				)}
 				{d.overdueInvoices.length > 0 && (
 					<Link
 						href="/financiar"
-						className="flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]"
+						className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-raised)]"
 					>
-						<FileWarning className="size-4 shrink-0 text-[var(--status-blocked)]" />
-						<span className="text-[var(--foreground)]">
-							<strong>{d.overdueInvoices.length}</strong> facturi restante
+						<FileWarning className="size-4 shrink-0 text-[var(--accent)]" />
+						<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
+							[{d.overdueInvoices.length}] FACTURI RESTANTE
 						</span>
-						<ArrowRight className="ml-auto size-3.5 text-[var(--muted)]" />
+						<ArrowRight className="ml-auto size-3.5 text-[var(--text-secondary)]" />
 					</Link>
 				)}
 			</div>
@@ -255,48 +220,48 @@ function ChartAndActivitySection({
 		<section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
 			<Card flush>
 				<div className="px-5 py-4">
-					<h2 className="text-base font-semibold text-[var(--heading)]">
-						Ore facturabile pe proiect
+					<h2 className="text-base font-medium text-[var(--text-display)]">
+						ORE FACTURABILE PE PROIECT
 					</h2>
-					<p className="mt-0.5 text-sm text-[var(--muted)]">
-						Distributia orelor pontate pe proiecte active
+					<p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+						DISTRIBUTIA ORELOR PONTATE
 					</p>
 				</div>
 				<div className="px-4 pb-3">
 					<ClientProductivityChart data={d.chartData} />
 				</div>
-				<div className="grid gap-px border-t border-[var(--border)] bg-[var(--border)] md:grid-cols-3">
-					<div className="bg-[var(--surface-1)] px-4 py-3">
-						<p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
-							Planificate azi
+				<div className="grid gap-px border-t border-[var(--border)] md:grid-cols-3">
+					<div className="bg-[var(--surface)] px-4 py-3">
+						<p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+							PLANIFICATE AZI
 						</p>
-						<p className="mt-1 text-lg font-semibold text-[var(--heading)] tabular-nums">
+						<p className="mt-1 font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--text-display)]">
 							{d.todaySchedule.length}
 						</p>
 					</div>
-					<div className="bg-[var(--surface-1)] px-4 py-3">
-						<p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
-							Neincasat
+					<div className="bg-[var(--surface)] px-4 py-3">
+						<p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+							NEINCASAT
 						</p>
-						<p className="mt-1 text-lg font-semibold text-[var(--heading)] tabular-nums">
+						<p className="mt-1 font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--text-display)]">
 							{formatCurrency(receivables)}
 						</p>
 					</div>
-					<div className="bg-[var(--surface-1)] px-4 py-3">
-						<p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
-							Aprobari
+					<div className="bg-[var(--surface)] px-4 py-3">
+						<p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+							APROBARI
 						</p>
-						<p className="mt-1 text-lg font-semibold text-[var(--heading)] tabular-nums">
+						<p className="mt-1 font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--text-display)]">
 							{d.pendingMaterialApprovals}
 						</p>
 					</div>
 				</div>
 			</Card>
 			<Card>
-				<Section title="Activitate recenta">
+				<Section title="ACTIVITATE RECENTA">
 					{d.latestActivities.length === 0 ? (
-						<p className="text-sm text-[var(--muted)]">
-							Nu exista activitate recenta.
+						<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+							NU EXISTA ACTIVITATE RECENTA.
 						</p>
 					) : (
 						<div className="space-y-3">
@@ -312,16 +277,15 @@ function ChartAndActivitySection({
 							).map((log) => (
 								<div
 									key={log.id}
-									className="border-l-2 border-[var(--border)] pl-3"
+									className="border-l-2 border-[var(--border-visible)] pl-3"
 								>
-									<p className="text-sm font-medium text-[var(--foreground)]">
+									<p className="text-sm font-medium text-[var(--text-display)]">
 										{log.action}
 									</p>
-									<p className="text-xs text-[var(--muted)]">
-										{fullName(log.user?.firstName, log.user?.lastName)} ·{" "}
-										{log.entityType} #{log.entityId.slice(-6)}
+									<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+										{fullName(log.user?.firstName, log.user?.lastName)} · {log.entityType} #{log.entityId.slice(-6)}
 									</p>
-									<p className="text-[11px] text-[var(--muted)]">
+									<p className="font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--text-disabled)]">
 										{formatDate(log.createdAt)}
 									</p>
 								</div>
@@ -340,26 +304,26 @@ function PipelineSection({ d }: { d: DashboardData }) {
 			<FgoWidget fgoStats={d.fgoStats} />
 			<Card>
 				<Section
-					title="Pipeline comercial"
+					title="PIPELINE COMERCIAL"
 					actions={
 						<Link
 							href="/oferte"
-							className="text-xs text-[var(--accent)] hover:underline"
+							className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--interactive)] hover:text-[var(--text-display)] transition-colors"
 						>
-							Vezi toate →
+							[VEZI TOATE]
 						</Link>
 					}
 				>
-					<StatRow label="Draft (in lucru)" value={d.offersDraft} />
-					<StatRow label="Trimise la client" value={d.offersSent} />
-					<StatRow label="Acceptate" value={d.offersAccepted} />
+					<StatRow label="DRAFT" value={d.offersDraft} />
+					<StatRow label="TRIMISE" value={d.offersSent} />
+					<StatRow label="ACCEPTATE" value={d.offersAccepted} />
 				</Section>
 			</Card>
 			<Card>
-				<Section title="Avizare ISU">
+				<Section title="AVIZARE ISU">
 					{d.avizareProjects.length === 0 ? (
-						<p className="text-sm text-[var(--muted)]">
-							Niciun proiect in faza de avizare ISU.
+						<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+							NICIUN PROIECT IN FATA DE AVIZARE ISU.
 						</p>
 					) : (
 						<div className="space-y-2">
@@ -374,18 +338,18 @@ function PipelineSection({ d }: { d: DashboardData }) {
 								<Link
 									key={project.id}
 									href={`/proiecte/${project.id}`}
-									className="block rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors hover:bg-[var(--surface-2)]"
+									className="block rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-[var(--surface-raised)]"
 								>
-									<p className="truncate font-medium text-[var(--foreground)]">
+									<p className="truncate font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
 										{project.code} · {project.title}
 									</p>
 									{project.daysLeft !== null && (
 										<p
-											className={`text-xs ${project.daysLeft < 7 ? "text-[var(--status-blocked)]" : "text-[var(--muted)]"}`}
+											className={`font-mono text-[10px] uppercase tracking-[0.06em] ${project.daysLeft < 7 ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`}
 										>
 											{project.daysLeft > 0
-												? `Termen: ${project.daysLeft} zile`
-												: "Termen DEPASIT"}
+												? `TERMEN: ${project.daysLeft} ZILE`
+												: "TERMEN DEPASIT"}
 										</p>
 									)}
 								</Link>
@@ -402,19 +366,19 @@ function PortfolioSection({ d }: { d: DashboardData }) {
 	return (
 		<section className="grid gap-4 md:grid-cols-2">
 			<Card>
-				<Section title="Portofoliu proiecte">
-					<StatRow label="Planificate" value={d.plannedProjects} />
-					<StatRow label="Active" value={d.activeProjects} />
-					<StatRow label="Blocate" value={d.blockedProjects} />
-					<StatRow label="Finalizate" value={d.completedProjects} />
+				<Section title="PORTOFOLIU PROIECTE">
+					<StatRow label="PLANIFICATE" value={d.plannedProjects} />
+					<StatRow label="ACTIVE" value={d.activeProjects} />
+					<StatRow label="BLOCATE" value={d.blockedProjects} />
+					<StatRow label="FINALIZATE" value={d.completedProjects} />
 				</Section>
 			</Card>
 			<Card>
-				<Section title="Lucrari si echipe">
+				<Section title="LUCRARI SI ECHIPE">
 					<StatRow label="TODO" value={d.todoOrders} />
-					<StatRow label="In progres" value={d.inProgressOrders} />
-					<StatRow label="Blocate" value={d.blockedOrders} />
-					<StatRow label="Pontaj activ" value={d.clockedIn} />
+					<StatRow label="IN PROGRES" value={d.inProgressOrders} />
+					<StatRow label="BLOCATE" value={d.blockedOrders} />
+					<StatRow label="PONTAJ ACTIV" value={d.clockedIn} />
 				</Section>
 			</Card>
 		</section>
@@ -425,8 +389,8 @@ function ScheduleSection({ d }: { d: DashboardData }) {
 	return (
 		<Card flush>
 			<div className="px-5 py-4">
-				<h2 className="text-base font-semibold text-[var(--heading)]">
-					Program echipe astazi
+				<h2 className="text-base font-medium text-[var(--text-display)]">
+					PROGRAM ECHIPE ASTAZI
 				</h2>
 			</div>
 			<div className="p-3 sm:p-4">
@@ -446,7 +410,7 @@ function ScheduleSection({ d }: { d: DashboardData }) {
 						title: item.title,
 						startLabel: item.startDate ? formatDate(item.startDate) : "-",
 						projectTitle: item.project.title,
-						teamName: item.team?.name || "Nealocata",
+						teamName: item.team?.name || "NEALOCATA",
 						status: item.status,
 						description: item.description || "",
 					}))}
@@ -724,7 +688,7 @@ export default async function DashboardPage() {
 			projectsById.map((p) => [p.id, p.title] as const),
 		);
 		const chartData = weeklyHours.map((h) => ({
-			name: (projectNameById.get(h.projectId) || "Proiect").slice(0, 18),
+			name: (projectNameById.get(h.projectId) || "PROIECT").slice(0, 18),
 			ore: Math.round((h._sum.durationMinutes || 0) / 60),
 		}));
 		const offerCountByStatus = new Map(
@@ -811,7 +775,7 @@ export default async function DashboardPage() {
 	return (
 		<PermissionGuard resource="REPORTS" action="VIEW">
 			<div className="page-stack">
-				<PageHeader title="Panou operational" subtitle={roleContext.subtitle} />
+				<PageHeader title="PANOU OPERATIONAL" subtitle={roleContext.subtitle} />
 				<KpiStrip d={d as unknown as DashboardData} />
 				<ActionQueue d={d as unknown as DashboardData} />
 				<ChartAndActivitySection

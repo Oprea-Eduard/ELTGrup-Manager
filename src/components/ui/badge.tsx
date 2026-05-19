@@ -1,49 +1,37 @@
 import { cn } from "@/src/lib/utils";
 
-const filledStyles: Record<string, string> = {
-	success:
-		"border-[color-mix(in_oklab,var(--status-active)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-active)_15%,transparent)] text-[color-mix(in_oklab,var(--status-active)_80%,white_20%)]",
-	warning:
-		"border-[color-mix(in_oklab,var(--status-pending)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-pending)_15%,transparent)] text-[color-mix(in_oklab,var(--status-pending)_80%,white_20%)]",
-	danger:
-		"border-[color-mix(in_oklab,var(--status-blocked)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-blocked)_15%,transparent)] text-[color-mix(in_oklab,var(--status-blocked)_80%,white_20%)]",
-	neutral:
-		"border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted-strong)]",
-	info: "border-[color-mix(in_oklab,var(--status-info)_40%,transparent)] bg-[color-mix(in_oklab,var(--status-info)_15%,transparent)] text-[color-mix(in_oklab,var(--status-info)_80%,white_20%)]",
+const borderStyles: Record<string, string> = {
+	success: "border-[var(--success)] text-[var(--success)]",
+	warning: "border-[var(--warning)] text-[var(--warning)]",
+	danger: "border-[var(--accent)] text-[var(--accent)]",
+	neutral: "border-[var(--border-visible)] text-[var(--text-secondary)]",
+	info: "border-[var(--interactive)] text-[var(--interactive)]",
 };
 
 const dotColors: Record<string, string> = {
-	success: "bg-[var(--status-active)]",
-	warning: "bg-[var(--status-pending)]",
-	danger: "bg-[var(--status-blocked)]",
-	neutral: "bg-[var(--muted)]",
-	info: "bg-[var(--status-info)]",
-};
-
-const sizeStyles = {
-	sm: "px-1.5 py-0.5 text-[9px]",
-	md: "px-2 py-0.5 text-[10px]",
+	success: "bg-[var(--success)]",
+	warning: "bg-[var(--warning)]",
+	danger: "bg-[var(--accent)]",
+	neutral: "bg-[var(--text-secondary)]",
+	info: "bg-[var(--interactive)]",
 };
 
 export function Badge({
 	children,
 	tone = "neutral",
 	className,
-	size = "md",
 	dot,
 }: {
 	children: React.ReactNode;
-	tone?: keyof typeof filledStyles;
+	tone?: keyof typeof borderStyles;
 	className?: string;
-	size?: "sm" | "md";
-	/** Show as a dot + text instead of a pill */
 	dot?: boolean;
 }) {
 	if (dot) {
 		return (
 			<span
 				className={cn(
-					"inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--muted-strong)]",
+					"inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]",
 					className,
 				)}
 			>
@@ -61,9 +49,8 @@ export function Badge({
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center rounded-full border font-semibold uppercase tracking-[0.06em] leading-none",
-				sizeStyles[size],
-				filledStyles[tone],
+				"inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] leading-none",
+				borderStyles[tone],
 				className,
 			)}
 		>

@@ -9,25 +9,33 @@ export function FgoSummaryCard({
 }) {
 	return (
 		<Card>
-			<p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">
-				eFactura FGO · ANAF
+			<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)] mb-3">
+				eFACTURA FGO · ANAF
 			</p>
 			<div className="grid grid-cols-3 gap-2 mb-3">
-				<div className="rounded-lg border border-[var(--border)]/60 bg-[var(--surface)] p-2 text-center">
-					<p className="text-lg font-semibold text-emerald-400">{stats.sent}</p>
-					<p className="text-[10px] text-[var(--muted)]">Transmise</p>
+				<div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-raised)] p-2 text-center">
+					<p className="font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--success)]">
+						{stats.sent}
+					</p>
+					<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+						TRANSMISE
+					</p>
 				</div>
-				<div className="rounded-lg border border-[var(--border)]/60 bg-[var(--surface)] p-2 text-center">
-					<p className="text-lg font-semibold text-[var(--muted-strong)]">
+				<div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-raised)] p-2 text-center">
+					<p className="font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--text-primary)]">
 						{stats.pending}
 					</p>
-					<p className="text-[10px] text-[var(--muted)]">In curs</p>
+					<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+						IN CURS
+					</p>
 				</div>
-				<div className="rounded-lg border border-[var(--border)]/60 bg-[var(--surface)] p-2 text-center">
-					<p className="text-lg font-semibold text-[var(--danger)]">
+				<div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-raised)] p-2 text-center">
+					<p className="font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--accent)]">
 						{stats.errors}
 					</p>
-					<p className="text-[10px] text-[var(--muted)]">Erori</p>
+					<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+						ERORI
+					</p>
 				</div>
 			</div>
 		</Card>

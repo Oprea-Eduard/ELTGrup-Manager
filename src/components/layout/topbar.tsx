@@ -23,28 +23,25 @@ export async function Topbar({
 	const roleLabel = formatRoleLabels(user.roleKeys);
 
 	return (
-		<header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--border)] bg-[var(--background)]/95 px-3 py-2.5 backdrop-blur-md sm:px-5 lg:px-6">
-			{/* Mobile hamburger */}
+		<header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--border)] bg-[var(--black)] px-3 py-2 sm:px-5 lg:px-6">
 			<MobileNavDrawer visibleModules={visibleModules} />
 
-			{/* Search — dominant element */}
 			<TopbarGlobalSearch
 				visibleModules={visibleModules}
 				className="min-w-0 flex-1"
 				placeholder="Cauta proiect, lucrare, material..."
 			/>
 
-			{/* Actions */}
 			<div className="flex items-center gap-2 shrink-0">
 				{visibleSet.has("notifications") ? (
 					<Link
 						href="/notificari"
-						className="relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] text-[var(--muted-strong)] transition-colors hover:bg-[var(--surface-2)] sm:h-10 sm:w-10"
+						className="relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-visible)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-display)] sm:h-10 sm:w-10"
 						aria-label="Notificari"
 					>
 						<Bell className="size-4" />
 						{unreadNotifications > 0 ? (
-							<span className="absolute -right-1 -top-1 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--status-blocked)] px-1 text-[9px] font-bold text-white">
+							<span className="absolute -right-1 -top-1 inline-flex min-h-[16px] min-w-[16px] items-center justify-center bg-[var(--accent)] px-1 font-mono text-[9px] text-[var(--text-display)]">
 								{unreadNotifications > 99 ? "99+" : unreadNotifications}
 							</span>
 						) : null}
@@ -52,10 +49,10 @@ export async function Topbar({
 				) : null}
 
 				<div className="hidden text-right sm:block">
-					<p className="max-w-[160px] truncate text-sm font-medium text-[var(--foreground)]">
-						{user.name || "Utilizator"}
+					<p className="max-w-[160px] truncate font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-primary)]">
+						{user.name || "UTILIZATOR"}
 					</p>
-					<p className="max-w-[160px] truncate text-[11px] text-[var(--muted)]">
+					<p className="max-w-[160px] truncate font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
 						{roleLabel}
 					</p>
 				</div>

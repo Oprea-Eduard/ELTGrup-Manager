@@ -1,9 +1,5 @@
 import { cn } from "@/src/lib/utils";
 
-/**
- * Clean label/value pair with optional trend indicator.
- * Replaces the verbose ListItem + inline stat pattern.
- */
 export function StatRow({
 	label,
 	value,
@@ -15,29 +11,30 @@ export function StatRow({
 	value: string | number;
 	trend?: "up" | "down";
 	className?: string;
-	/** Show the value in muted color instead of foreground */
 	muted?: boolean;
 }) {
 	return (
 		<div
 			className={cn(
-				"flex items-center justify-between py-1.5 text-sm",
+				"flex items-center justify-between py-1.5",
 				className,
 			)}
 		>
-			<span className="text-[var(--muted-strong)]">{label}</span>
+			<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+				{label}
+			</span>
 			<span
 				className={cn(
-					"font-semibold tabular-nums",
-					muted ? "text-[var(--muted)]" : "text-[var(--foreground)]",
+					"font-mono tabular-nums text-sm",
+					muted ? "text-[var(--text-secondary)]" : "text-[var(--text-primary)]",
 				)}
 			>
 				{value}
 				{trend === "up" && (
-					<span className="ml-1 text-xs text-[var(--status-active)]">↑</span>
+					<span className="ml-1 text-xs text-[var(--success)]">↑</span>
 				)}
 				{trend === "down" && (
-					<span className="ml-1 text-xs text-[var(--status-blocked)]">↓</span>
+					<span className="ml-1 text-xs text-[var(--accent)]">↓</span>
 				)}
 			</span>
 		</div>

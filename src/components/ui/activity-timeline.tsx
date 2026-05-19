@@ -31,9 +31,13 @@ export function ActivityTimeline({
 }) {
 	if (events.length === 0) {
 		return (
-			<div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-4 text-sm">
-				<p className="font-semibold text-[var(--foreground)]">{emptyTitle}</p>
-				<p className="mt-1 text-xs text-[var(--muted)]">{emptyDescription}</p>
+			<div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
+				<p className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-display)]">
+					[ {emptyTitle} ]
+				</p>
+				<p className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+					{emptyDescription}
+				</p>
 			</div>
 		);
 	}
@@ -43,29 +47,29 @@ export function ActivityTimeline({
 			{events.map((event) => (
 				<div
 					key={event.id}
-					className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3"
+					className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-3"
 				>
 					<div className="flex items-center justify-between gap-3">
-						<p className="text-sm font-semibold text-[var(--foreground)]">
+						<p className="text-sm font-medium text-[var(--text-display)]">
 							{event.title}
 						</p>
 						<Badge tone={event.tone || "neutral"}>{event.category}</Badge>
 					</div>
 					{event.detail ? (
-						<p className="mt-1 text-xs text-[var(--muted-strong)]">
+						<p className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
 							{event.detail}
 						</p>
 					) : null}
 					<div className="mt-2 flex items-center justify-between gap-3">
-						<p className="text-xs text-[var(--muted)]">
+						<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
 							{formatTimelineDate(event.at)}
 						</p>
 						{event.href ? (
 							<Link
-								className="text-xs font-semibold text-[#c6dbff] hover:underline"
+								className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--interactive)] hover:text-[var(--text-display)] transition-colors"
 								href={event.href}
 							>
-								Deschide
+								[DESCHIDE]
 							</Link>
 						) : null}
 					</div>

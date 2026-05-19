@@ -14,8 +14,8 @@ export function Textarea({
 			ref={ref}
 			rows={rows ?? 3}
 			className={cn(
-				"w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none transition-colors",
-				"focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--ring)]",
+				"w-full border-b border-[var(--border-visible)] bg-transparent px-1 pt-2 pb-1 font-mono text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none transition-colors",
+				"focus:border-b-[var(--text-display)]",
 				"disabled:cursor-not-allowed disabled:opacity-60",
 				className,
 			)}

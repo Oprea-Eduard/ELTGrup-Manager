@@ -1,13 +1,31 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { GeistMono } from "geist/font/mono";
-import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
+import { Space_Grotesk, Space_Mono, Doto } from "next/font/google";
 import { Toaster } from "sonner";
 import { HeroUIRouterProvider } from "@/src/components/providers/heroui-provider";
 import { ReactQueryProvider } from "@/src/components/providers/react-query-provider";
 import { SyncProvider } from "@/src/components/providers/sync-provider";
 import { ThemeProvider } from "@/src/components/providers/theme-provider";
 import "./globals.css";
+
+const spaceGrotesk = Space_Grotesk({
+	subsets: ["latin", "latin-ext"],
+	variable: "--font-space-grotesk",
+	display: "swap",
+});
+
+const spaceMono = Space_Mono({
+	subsets: ["latin", "latin-ext"],
+	variable: "--font-space-mono",
+	weight: ["400", "700"],
+	display: "swap",
+});
+
+const doto = Doto({
+	subsets: ["latin", "latin-ext"],
+	variable: "--font-doto",
+	display: "swap",
+});
 
 export const metadata: Metadata = {
 	title: "ELTGRUP Manager",
@@ -33,8 +51,8 @@ export const viewport: Viewport = {
 	initialScale: 1,
 	viewportFit: "cover",
 	themeColor: [
-		{ media: "(prefers-color-scheme: dark)", color: "#090c12" },
-		{ media: "(prefers-color-scheme: light)", color: "#f8f9fb" },
+		{ media: "(prefers-color-scheme: dark)", color: "#000000" },
+		{ media: "(prefers-color-scheme: light)", color: "#F5F5F5" },
 	],
 	colorScheme: "dark light",
 };
@@ -45,7 +63,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang="ro"
-			className={`${GeistSans.variable} ${GeistMono.variable}`}
+			className={`${spaceGrotesk.variable} ${spaceMono.variable} ${doto.variable}`}
 			suppressHydrationWarning
 		>
 			<body className="antialiased">

@@ -11,14 +11,14 @@ type Crumb = {
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
 	return (
 		<nav
-			className="flex items-center gap-1.5 text-xs text-[var(--muted)] mb-3"
+			className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)] mb-3"
 			aria-label="Breadcrumb"
 		>
 			<Link
 				href="/panou"
-				className="hover:text-[var(--accent-strong)] transition-colors"
+				className="hover:text-[var(--text-display)] transition-colors"
 			>
-				<Home className="size-3.5" />
+				[ P ]
 			</Link>
 			{items.map((item) => (
 				<span key={item.label} className="flex items-center gap-1.5">
@@ -26,12 +26,12 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
 					{item.href ? (
 						<Link
 							href={item.href}
-							className="hover:text-[var(--accent-strong)] transition-colors"
+							className="hover:text-[var(--text-display)] transition-colors"
 						>
 							{item.label}
 						</Link>
 					) : (
-						<span className="text-[var(--muted-strong)] font-medium">
+						<span className="text-[var(--text-primary)]">
 							{item.label}
 						</span>
 					)}

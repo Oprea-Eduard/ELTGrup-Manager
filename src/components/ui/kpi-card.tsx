@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { memo } from "react";
-import { Skeleton } from "@/src/components/ui/skeleton";
 import { cn } from "@/src/lib/utils";
 
 export const KpiCard = memo(function KpiCard({
@@ -22,51 +21,51 @@ export const KpiCard = memo(function KpiCard({
 	loading?: boolean;
 	onClick?: () => void;
 }) {
-	const severityRail: Record<string, string> = {
-		active: "border-l-[var(--status-active)]",
-		blocked: "border-l-[var(--status-blocked)]",
-		pending: "border-l-[var(--status-pending)]",
-		done: "border-l-[var(--status-done)]",
-		info: "border-l-[var(--status-info)]",
+	const severityColor: Record<string, string> = {
+		active: "text-[var(--success)]",
+		blocked: "text-[var(--accent)]",
+		pending: "text-[var(--warning)]",
+		done: "text-[var(--text-secondary)]",
+		info: "text-[var(--interactive)]",
 	};
 
 	const content = (
 		<>
-			<p className="text-[11px] font-medium tracking-wide text-[var(--muted)]">
+			<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
 				{label}
 			</p>
 			{loading ? (
-				<Skeleton className="mt-2 h-7 w-20" />
+				<span className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+					[INCARCARE...]
+				</span>
 			) : (
-				<p className="mt-2 flex items-baseline gap-2 text-2xl font-semibold text-[var(--heading)] tabular-nums leading-none">
-					{value}
+				<p className="mt-2 flex items-baseline gap-2 font-doto text-[32px] font-medium leading-none tracking-tight text-[var(--text-display)] sm:text-[36px]">
+					<span className={severity ? severityColor[severity] : ""}>{value}</span>
 					{trend === "up" && (
-						<span className="text-xs font-medium text-[var(--status-active)]">
-							↑
-						</span>
+						<span className="text-[16px] text-[var(--success)]">↑</span>
 					)}
 					{trend === "down" && (
-						<span className="text-xs font-medium text-[var(--status-blocked)]">
-							↓
-						</span>
+						<span className="text-[16px] text-[var(--accent)]">↓</span>
 					)}
 				</p>
 			)}
 			{helper ? (
 				loading ? (
-					<Skeleton className="mt-1.5 h-3.5 w-28" />
+					<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+						[INCARCARE...]
+					</span>
 				) : (
-					<p className="mt-1.5 text-xs text-[var(--muted)]">{helper}</p>
+					<p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+						{helper}
+					</p>
 				)
 			) : null}
 		</>
 	);
 
 	const classes = cn(
-		"rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-4",
-		severity && `border-l-[3px] ${severityRail[severity]}`,
-		(onClick || href) &&
-			"cursor-pointer transition-colors hover:bg-[var(--surface-2)]",
+		"rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4",
+		(onClick || href) && "cursor-pointer transition-colors hover:bg-[var(--surface-raised)]",
 	);
 
 	if (href) {

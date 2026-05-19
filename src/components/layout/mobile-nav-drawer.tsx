@@ -44,24 +44,22 @@ export function MobileNavDrawer({
 
 	const drawer = (
 		<>
-			{/* Backdrop */}
 			{isOpen && (
 				<div
-					className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+					className="fixed inset-0 z-40 bg-black/60 lg:hidden"
 					onClick={handleClose}
 					aria-hidden="true"
 				/>
 			)}
 
-			{/* Drawer panel */}
-			<aside className="fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--shell)] lg:hidden">
+			<aside className={cn(
+				"fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--black)] transition-transform duration-200",
+				isOpen ? "translate-x-0" : "-translate-x-full",
+			)}>
 				<div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
 					<div>
-						<p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">
-							ELTGRUP Manager
-						</p>
-						<p className="text-base font-semibold text-[var(--heading)]">
-							Meniu
+						<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--accent)]">
+							ELTGRUP
 						</p>
 					</div>
 					<Button
@@ -83,7 +81,7 @@ export function MobileNavDrawer({
 
 						return (
 							<section key={section} className="mb-6">
-								<p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+								<p className="mb-2 px-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-disabled)]">
 									{section}
 								</p>
 								<div className="flex flex-col gap-0.5">
@@ -99,15 +97,15 @@ export function MobileNavDrawer({
 												href={item.href}
 												onClick={handleClose}
 												className={cn(
-													"flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
+													"flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors",
 													active
-														? "border-l-2 border-l-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--foreground)]"
-														: "text-[var(--muted-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]",
+														? "text-[var(--text-display)]"
+														: "text-[var(--text-disabled)] hover:text-[var(--text-primary)]",
 												)}
 											>
 												<Icon
 													className={cn(
-														"h-4.5 w-4.5 shrink-0",
+														"size-4 shrink-0",
 														active ? "text-[var(--accent)]" : "",
 													)}
 												/>
