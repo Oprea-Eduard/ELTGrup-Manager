@@ -6,23 +6,26 @@ import { Suspense, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 
-function LoginFormInner() {
+	function LoginFormInner() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const { push, refresh } = useRouter();
-	const { get } = useSearchParams();
+	const { push } = useRouter();
+	const searchParams = useSearchParams();
 
 	async function onSubmit(event: React.FormEvent) {
 		event.preventDefault();
 		setLoading(true);
 		setError("");
 
+		const callbackUrl = searchParams.get("callbackUrl") || "/panou";
+
 		const result = await signIn("credentials", {
 			email: email.trim().toLowerCase(),
 			password,
 			redirect: false,
+			callbackUrl,
 		});
 
 		setLoading(false);
@@ -36,8 +39,7 @@ function LoginFormInner() {
 			return;
 		}
 
-		push(get("callbackUrl") || "/panou");
-		refresh();
+		push(callbackUrl);
 	}
 
 	return (
