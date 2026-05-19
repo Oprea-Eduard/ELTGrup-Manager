@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
 	});
 
 	if (!token) {
-		return NextResponse.next();
+		return NextResponse.redirect(new URL("/autentificare", request.url));
 	}
 
 	const user = {
@@ -35,6 +35,12 @@ export async function proxy(request: NextRequest) {
 		const fallbackPath = getDefaultModulePath(user);
 		const safeFallbackPath =
 			fallbackPath !== pathname ? fallbackPath : "/autentificare";
+		
+		if (safeFallbackPath === "/autentificare") {
+			// Safeguard: Prevent infinite redirect loops for authenticated users with no active modules.
+			// Let the request proceed so that AppLayout can render the "Cont autenticat fara module active" screen.
+			return NextResponse.next();
+		}
 		return NextResponse.redirect(new URL(safeFallbackPath, request.url));
 	}
 

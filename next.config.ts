@@ -66,6 +66,7 @@ const nextConfig: NextConfig = {
 				? { exclude: ["error", "warn"] }
 				: false,
 	},
+	turbopack: {},
 	experimental: {
 		optimizePackageImports: [
 			"@heroui/react",
