@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_URL")
 }
 
 model User {
@@ -1289,4 +1290,13 @@ enum AssignmentStatus {
   INTRERUPT
   FINALIZAT
   ANULAT
+}
+
+model tenants {
+  id         String    @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  name       String?
+  created    DateTime  @default(now()) @db.Timestamp(6)
+  updated    DateTime  @default(now()) @db.Timestamp(6)
+  deleted    DateTime? @db.Timestamp(6)
+  compute_id String?   @db.Uuid
 }
