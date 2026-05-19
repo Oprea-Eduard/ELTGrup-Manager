@@ -43,6 +43,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated reports
+eslint-results.json
+
+# uploaded files
+/storage/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

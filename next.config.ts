@@ -1,13 +1,15 @@
 import withSerwistInit from "@serwist/next";
 import type { NextConfig } from "next";
 
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_HOST ?? "";
+
 const csp = [
 	"default-src 'self'",
-	"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+	"script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
 	"style-src 'self' 'unsafe-inline'",
-	"img-src 'self' data: blob: https://images.pexels.com https://rfcaweuqpwlnukkuikzv.supabase.co",
+	`img-src 'self' data: blob: https://images.pexels.com https://${supabaseHost}`,
 	"font-src 'self'",
-	"connect-src 'self' https://rfcaweuqpwlnukkuikzv.supabase.co",
+	`connect-src 'self' https://${supabaseHost}`,
 	"frame-src 'none'",
 	"object-src 'none'",
 	"base-uri 'self'",
@@ -37,7 +39,7 @@ const nextConfig: NextConfig = {
 					{
 						key: "Permissions-Policy",
 						value:
-							"camera=(), microphone=(), geolocation=(), interest-cohort=()",
+							"camera=(self), geolocation=(self), microphone=(), interest-cohort=()",
 					},
 					{
 						key: "Strict-Transport-Security",
