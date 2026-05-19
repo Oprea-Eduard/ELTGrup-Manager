@@ -23,9 +23,7 @@ export async function proxy(request: NextRequest) {
 	});
 
 	if (!token) {
-		const loginUrl = new URL("/autentificare", request.url);
-		loginUrl.searchParams.set("callbackUrl", pathname);
-		return NextResponse.redirect(loginUrl);
+		return NextResponse.next();
 	}
 
 	const user = {

@@ -25,7 +25,6 @@ import { Input } from "@/src/components/ui/input";
 			email: email.trim().toLowerCase(),
 			password,
 			redirect: false,
-			callbackUrl,
 		});
 
 		setLoading(false);
