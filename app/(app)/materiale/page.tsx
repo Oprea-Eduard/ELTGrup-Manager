@@ -53,21 +53,21 @@ const equipmentStatusLabels: Record<EquipmentStatus, string> = {
 
 function TabNav({ currentTab }: { currentTab: string }) {
 	const tabs = [
-		{ id: "stoc", label: "Stoc Materiale" },
-		{ id: "cereri", label: "Cereri" },
-		{ id: "miscari", label: "Miscari" },
-		{ id: "echipamente", label: "Echipamente" },
+		{ id: "stoc", label: "STOC MATERIALE" },
+		{ id: "cereri", label: "CERERI" },
+		{ id: "miscari", label: "MISCARI" },
+		{ id: "echipamente", label: "ECHIPAMENTE" },
 	];
 	return (
 		<nav
-			className="flex items-center gap-1 overflow-x-auto border-b border-[var(--border)] pb-px"
+			className="flex h-[30px] items-stretch gap-0 overflow-hidden border-b border-[var(--b1)] bg-[var(--s2)]"
 			aria-label="Sectiuni gestiune"
 		>
 			{tabs.map((tab) => (
 				<Link
 					key={tab.id}
 					href={`/materiale?tab=${tab.id}`}
-					className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors ${currentTab === tab.id ? "border-b-2 border-[var(--accent)] text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+					className={`flex items-center border-b-2 px-3 text-[8px] font-bold tracking-[1.5px] transition-colors ${currentTab === tab.id ? "border-[var(--amber)] text-[var(--amber)]" : "border-transparent text-[var(--t3)] hover:text-[var(--t)]"}`}
 					aria-current={currentTab === tab.id ? "page" : undefined}
 				>
 					{tab.label}
