@@ -6,7 +6,7 @@ import { Suspense, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 
 function LoginFormInner() {
-	const [email, setEmail] = useState("");
+	const [email, setEmail] = useState("eduard@eltgrup.ro");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -41,9 +41,11 @@ function LoginFormInner() {
 	}
 
 	return (
-		<form onSubmit={onSubmit} className="mt-8 space-y-6">
+		<form onSubmit={onSubmit} className="mt-5 space-y-3.5">
 			<div>
-				<label htmlFor="email">Email</label>
+				<label htmlFor="email" className="mb-1 block text-[9px] font-bold tracking-[2px] text-[var(--t3)]">
+					EMAIL
+				</label>
 				<input
 					id="email"
 					value={email}
@@ -51,11 +53,13 @@ function LoginFormInner() {
 					type="email"
 					required
 					autoComplete="username"
-					className="mt-1 h-10 w-full border-b border-[var(--border-visible)] bg-transparent px-1 pb-1 pt-2 font-mono text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-b-[var(--text-display)]"
+					className="w-full border border-[var(--b1)] bg-[var(--s1)] px-3 py-2 font-mono text-[11px] text-[var(--t2)] outline-none focus:border-[var(--amber)] focus:text-[var(--t)]"
 				/>
 			</div>
 			<div>
-				<label htmlFor="password">Parola</label>
+				<label htmlFor="password" className="mb-1 block text-[9px] font-bold tracking-[2px] text-[var(--t3)]">
+					PAROLA
+				</label>
 				<input
 					id="password"
 					value={password}
@@ -63,20 +67,27 @@ function LoginFormInner() {
 					type="password"
 					required
 					autoComplete="current-password"
-					className="mt-1 h-10 w-full border-b border-[var(--border-visible)] bg-transparent px-1 pb-1 pt-2 font-mono text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-b-[var(--text-display)]"
+					className="w-full border border-[var(--b1)] bg-[var(--s1)] px-3 py-2 font-mono text-[11px] text-[var(--t3)] outline-none focus:border-[var(--amber)] focus:text-[var(--t)]"
 				/>
 			</div>
 			{error ? (
-				<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--accent)]">
-					[ {error} ]
+				<p className="text-[9px] font-bold tracking-[1.5px] text-[var(--red)]">
+					{error}
 				</p>
 			) : null}
 			<Button type="submit" className="w-full" disabled={loading}>
-				{loading ? "[AUTENTIFICARE...]" : "Autentificare"}
+				{loading ? "CONECTARE..." : "CONECTARE  →"}
 			</Button>
-			<p className="text-center font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
-				Suport tehnic: administrator ELTGRUP
-			</p>
+			<div className="h-px bg-[var(--b1)]" />
+			<div className="flex items-center justify-between">
+				<span className="text-[9px] tracking-[1px] text-[var(--t3)]">
+					AM UITAT PAROLA
+				</span>
+				<span className="flex items-center gap-1 text-[9px] tracking-[1px] text-[var(--t3)]">
+					<span className="inline-block size-[5px] rounded-full bg-[var(--green)]" />
+					SISTEM OPERAȚIONAL
+				</span>
+			</div>
 		</form>
 	);
 }
@@ -85,7 +96,7 @@ export function LoginForm() {
 	return (
 		<Suspense
 			fallback={
-				<div className="mt-8 h-[200px] rounded-[var(--radius-sm)] bg-[var(--surface-raised)]" />
+				<div className="mt-5 h-[200px] bg-[var(--s2)]" />
 			}
 		>
 			<LoginFormInner />

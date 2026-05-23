@@ -2,6 +2,22 @@ import Link from "next/link";
 import { memo } from "react";
 import { cn } from "@/src/lib/utils";
 
+const colorMap: Record<string, string> = {
+	active: "bg-[var(--green)]",
+	blocked: "bg-[var(--red)]",
+	pending: "bg-[var(--amber)]",
+	done: "bg-[var(--t3)]",
+	info: "bg-[var(--steel)]",
+};
+
+const textColorMap: Record<string, string> = {
+	active: "text-[var(--green)]",
+	blocked: "text-[var(--red)]",
+	pending: "text-[var(--amber)]",
+	done: "text-[var(--t2)]",
+	info: "text-[var(--steel)]",
+};
+
 export const KpiCard = memo(function KpiCard({
 	label,
 	value,
@@ -21,41 +37,43 @@ export const KpiCard = memo(function KpiCard({
 	loading?: boolean;
 	onClick?: () => void;
 }) {
-	const severityColor: Record<string, string> = {
-		active: "text-[var(--success)]",
-		blocked: "text-[var(--accent)]",
-		pending: "text-[var(--warning)]",
-		done: "text-[var(--text-secondary)]",
-		info: "text-[var(--interactive)]",
-	};
-
 	const content = (
 		<>
-			<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+			<div
+				className={cn(
+					"absolute inset-x-0 top-0 h-[2px]",
+					severity ? colorMap[severity] : "bg-[var(--amber)]",
+				)}
+			/>
+			<p className="text-[8px] font-bold tracking-[2px] text-[var(--t3)]">
 				{label}
 			</p>
 			{loading ? (
-				<span className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+				<span className="font-mono text-[10px] text-[var(--t3)]">
 					[INCARCARE...]
 				</span>
 			) : (
-				<p className="mt-2 flex items-baseline gap-2 font-doto text-[32px] font-medium leading-none tracking-tight text-[var(--text-display)] sm:text-[36px]">
-					<span className={severity ? severityColor[severity] : ""}>{value}</span>
+				<p className="mt-1 flex items-baseline gap-1 font-mono text-[22px] font-medium leading-none tracking-tight sm:text-[26px]">
+					<span
+						className={severity ? textColorMap[severity] : "text-[var(--t)]"}
+					>
+						{value}
+					</span>
 					{trend === "up" && (
-						<span className="text-[16px] text-[var(--success)]">↑</span>
+						<span className="text-xs text-[var(--green)]">↑</span>
 					)}
 					{trend === "down" && (
-						<span className="text-[16px] text-[var(--accent)]">↓</span>
+						<span className="text-xs text-[var(--red)]">↓</span>
 					)}
 				</p>
 			)}
 			{helper ? (
 				loading ? (
-					<span className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+					<span className="font-mono text-[9px] text-[var(--t3)]">
 						[INCARCARE...]
 					</span>
 				) : (
-					<p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+					<p className="mt-0.5 text-[9px] text-[var(--t3)]">
 						{helper}
 					</p>
 				)
@@ -64,8 +82,8 @@ export const KpiCard = memo(function KpiCard({
 	);
 
 	const classes = cn(
-		"rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4",
-		(onClick || href) && "cursor-pointer transition-colors hover:bg-[var(--surface-raised)]",
+		"relative border border-[var(--b1)] bg-[var(--s1)] p-3 pt-[14px] overflow-hidden",
+		(onClick || href) && "cursor-pointer transition-colors hover:bg-[var(--s2)]",
 	);
 
 	if (href) {

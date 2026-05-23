@@ -10,20 +10,20 @@ export interface ButtonProps
 }
 
 const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
-	sm: "h-8 px-3 text-xs gap-1.5",
-	default: "h-10 px-6 text-sm gap-2 sm:h-11",
-	lg: "h-12 px-8 text-sm gap-2",
-	icon: "h-10 w-10 sm:h-11 sm:w-11 justify-center p-0",
+	sm: "h-7 px-2.5 text-[9px] gap-1",
+	default: "h-9 px-4 text-[10px] gap-2",
+	lg: "h-11 px-6 text-[11px] gap-2",
+	icon: "h-9 w-9 justify-center p-0",
 };
 
 const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
 	default:
-		"bg-[var(--text-display)] text-[var(--black)] hover:opacity-90",
+		"bg-[var(--amber)] text-black font-extrabold hover:opacity-90",
 	secondary:
-		"border border-[var(--border-visible)] text-[var(--text-primary)] hover:border-[var(--text-display)]",
+		"border border-[var(--b2)] text-[var(--t2)] font-bold hover:text-[var(--t)]",
 	ghost:
-		"text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-	destructive: "border border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]",
+		"text-[var(--t2)] font-bold hover:text-[var(--t)]",
+	destructive: "border border-[var(--red)] text-[var(--red)] font-bold hover:bg-[var(--rb)]",
 };
 
 export function Button({
@@ -44,7 +44,7 @@ export function Button({
 			type={asChild ? undefined : type}
 			disabled={disabled || loading}
 			className={cn(
-				"inline-flex items-center rounded-[var(--radius-pill)] font-mono text-[13px] uppercase tracking-[0.06em] font-normal transition-all duration-100",
+				"inline-flex items-center justify-center font-[var(--font-heading)] tracking-[2.5px] transition-colors",
 				"disabled:pointer-events-none disabled:opacity-50",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
 				sizeStyles[size],
@@ -55,7 +55,7 @@ export function Button({
 			{...props}
 		>
 			{loading && (
-				<span className="inline-block size-3.5 rounded-full border border-current border-r-transparent animate-spin" />
+				<span className="inline-block size-3 rounded-full border border-current border-r-transparent animate-spin" />
 			)}
 			{children}
 		</Comp>

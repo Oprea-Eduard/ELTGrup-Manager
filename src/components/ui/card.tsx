@@ -19,9 +19,9 @@ export function Card({
 	return (
 		<Tag
 			className={cn(
-				"rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]",
-				flush ? "p-0" : "p-4 sm:p-5",
-				rail === "alert" && "border-[var(--accent)]",
+				"border border-[var(--b1)] bg-[var(--s1)]",
+				rail === "alert" && "border-[var(--red)]",
+				flush ? "p-0" : "p-3 sm:p-4",
 				className,
 			)}
 		>

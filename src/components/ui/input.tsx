@@ -12,9 +12,8 @@ export function Input({
 			ref={ref}
 			type={type}
 			className={cn(
-				"h-10 w-full border-b border-[var(--border-visible)] bg-transparent px-1 pb-1 pt-2 font-mono text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] transition-colors",
-				"focus:border-b-[var(--text-display)]",
-				"sm:h-11",
+				"h-9 w-full border border-[var(--b1)] bg-[var(--s1)] px-3 font-mono text-[11px] text-[var(--t2)] outline-none transition-colors",
+				"focus:border-[var(--amber)] focus:text-[var(--t)]",
 				className,
 			)}
 			{...props}

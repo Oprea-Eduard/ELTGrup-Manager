@@ -14,7 +14,6 @@ export function Sidebar({
 	visibleModules,
 	collapsed,
 	userName,
-	userAvatar,
 }: {
 	visibleModules: AppModule[];
 	collapsed?: boolean;
@@ -28,30 +27,29 @@ export function Sidebar({
 	return (
 		<aside
 			className={cn(
-				"sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[var(--border)] bg-[var(--black)] lg:flex",
+				"sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[var(--b1)] bg-[var(--s1)] lg:flex",
 				collapsed ? "w-[64px]" : "w-[200px]",
 			)}
 		>
-			{/* Logo area */}
-			<div
-				className={cn(
-					"border-b border-[var(--border)]",
-					collapsed ? "px-2 py-4" : "px-4 py-4",
-				)}
-			>
-				{collapsed ? (
-					<p className="text-center font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--accent)]">
-						EG
-					</p>
-				) : (
-					<p className="font-mono text-[13px] uppercase tracking-[0.08em] text-[var(--accent)]">
-						ELTGRUP
-					</p>
+			{/* Brand */}
+			<div className="flex items-center gap-2 border-b border-[var(--b1)] px-4 py-4">
+				<div className="flex size-7 items-center justify-center bg-[var(--amber)] text-[11px] font-extrabold text-black">
+					EG
+				</div>
+				{!collapsed && (
+					<div>
+						<div className="text-base font-bold tracking-[3px] text-[var(--t)]">
+							ELT GRUP
+						</div>
+						<div className="text-[8px] font-bold tracking-[3px] text-[var(--t3)]">
+							MANAGER
+						</div>
+					</div>
 				)}
 			</div>
 
 			{/* Navigation */}
-			<nav className="flex-1 overflow-y-auto px-2 py-3">
+			<nav className="flex-1 overflow-y-auto py-2">
 				{navSections.map((section) => {
 					const sectionItems = navItems.filter(
 						(item) => item.section === section && visibleSet.has(item.module),
@@ -59,76 +57,65 @@ export function Sidebar({
 					if (!sectionItems.length) return null;
 
 					return (
-						<section key={section} className={cn("mb-4", collapsed && "mb-3")}>
+						<section key={section} className="mb-2">
 							{!collapsed && (
-								<p className="mb-1 px-2.5 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-disabled)]">
+								<p className="px-4 py-1 font-[var(--font-heading)] text-[8px] font-bold tracking-[2px] text-[var(--t3)]">
 									{section}
 								</p>
 							)}
-							<div className="space-y-0.5">
-								{sectionItems.map((item) => {
-									const active =
-										pathname === item.href ||
-										pathname.startsWith(`${item.href}/`);
-									const Icon = item.icon;
+							{sectionItems.map((item) => {
+								const active =
+									pathname === item.href ||
+									pathname.startsWith(`${item.href}/`);
+								const Icon = item.icon;
 
-									return (
-										<a
-											key={item.href}
-											href={item.href}
-											title={collapsed ? item.label : undefined}
-											className={cn(
-												"group relative flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors",
-												item.sub && !collapsed ? "ml-4" : "",
-												collapsed ? "justify-center px-2 py-2" : "",
-												active
-													? "text-[var(--text-display)]"
-													: "text-[var(--text-disabled)] hover:text-[var(--text-primary)]",
-											)}
-										>
-											{active && (
-												<span className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 bg-[var(--accent)]" />
-											)}
-											{!item.sub && (
-												<Icon
-													className={cn(
-														"size-3.5 shrink-0",
-														active
-															? "text-[var(--accent)]"
-															: "text-[var(--text-disabled)] group-hover:text-[var(--text-primary)]",
-													)}
-												/>
-											)}
-											{!collapsed && (
-												<span className="min-w-0 flex-1 truncate">
-													{item.label}
-												</span>
-											)}
-										</a>
-									);
-								})}
-							</div>
+								return (
+									<a
+										key={item.href}
+										href={item.href}
+										title={collapsed ? item.label : undefined}
+										className={cn(
+											"flex items-center gap-2.5 px-4 py-1.5 text-[9px] font-bold tracking-[1.5px] transition-colors",
+											item.sub && !collapsed ? "ml-6" : "",
+											collapsed ? "justify-center px-2" : "",
+											active
+												? "text-[var(--amber)] border-l-2 border-[var(--amber)] bg-[var(--ab)]"
+												: "text-[var(--t3)] hover:text-[var(--t)]",
+										)}
+									>
+										{!item.sub && (
+											<Icon
+												className={cn(
+													"size-3.5 shrink-0",
+													active ? "text-[var(--amber)]" : "",
+												)}
+											/>
+										)}
+										{!collapsed && (
+											<span className="min-w-0 flex-1 truncate">
+												{item.label}
+											</span>
+										)}
+									</a>
+								);
+							})}
 						</section>
 					);
 				})}
 			</nav>
 
 			{/* Footer */}
-			<div className="border-t border-[var(--border)] p-3">
+			<div className="border-t border-[var(--b1)] p-3">
 				<div className="flex items-center gap-2">
-					{!collapsed && (userName || userAvatar) && (
-						<div className="min-w-0 flex-1 flex items-center gap-2">
-							{userName && (
-								<p className="truncate font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
-									{userName}
-								</p>
-							)}
-						</div>
+					{!collapsed && userName && (
+						<p className="flex-1 truncate font-[var(--font-heading)] text-[9px] font-bold tracking-[1px] text-[var(--t2)]">
+							{userName}
+						</p>
 					)}
 					<button
 						type="button"
 						onClick={toggle}
-						className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-visible)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-display)]"
+						className="flex size-6 items-center justify-center border border-[var(--b2)] text-[var(--t2)] hover:text-[var(--t)] transition-colors"
 						aria-label="Schimba tema"
 					>
 						{theme === "dark" ? (

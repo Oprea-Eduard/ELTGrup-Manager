@@ -54,7 +54,7 @@ function DialogContent({
 						exit={{ opacity: 0, scale: 0.95 }}
 						transition={{ duration: 0.15, ease: "easeOut" }}
 						className={cn(
-							"fixed left-[50%] top-[10%] z-50 mx-auto w-full max-w-lg -translate-x-1/2 gap-4 border border-[var(--border-visible)] bg-[var(--surface)] p-6 sm:rounded-[var(--radius-xl)] max-h-[80vh] overflow-y-auto",
+							"fixed left-[50%] top-[10%] z-50 mx-auto w-full max-w-lg -translate-x-1/2 gap-4 border border-[var(--b1)] bg-[var(--s1)] p-6 max-h-[80vh] overflow-y-auto",
 							className,
 						)}
 					>
@@ -75,13 +75,7 @@ const DialogHeader = ({
 	className,
 	...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-	<div
-		className={cn(
-			"flex flex-col space-y-1.5",
-			className,
-		)}
-		{...props}
-	/>
+	<div className={cn("flex flex-col space-y-1.5", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -90,10 +84,7 @@ const DialogFooter = ({
 	...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
 	<div
-		className={cn(
-			"flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-			className,
-		)}
+		className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
 		{...props}
 	/>
 );
@@ -109,10 +100,7 @@ function DialogTitle({
 	return (
 		<DialogPrimitive.Title
 			ref={ref}
-			className={cn(
-				"text-lg font-medium tracking-tight text-[var(--text-display)]",
-				className,
-			)}
+			className={cn("text-base font-bold tracking-[0.5px] text-[var(--t)]", className)}
 			{...props}
 		/>
 	);
@@ -129,7 +117,7 @@ function DialogDescription({
 	return (
 		<DialogPrimitive.Description
 			ref={ref}
-			className={cn("text-sm text-[var(--text-secondary)]", className)}
+			className={cn("text-sm text-[var(--t2)]", className)}
 			{...props}
 		/>
 	);

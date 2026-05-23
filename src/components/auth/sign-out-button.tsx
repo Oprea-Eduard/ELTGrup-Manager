@@ -8,11 +8,11 @@ export function SignOutButton() {
 	return (
 		<Button
 			onClick={() => signOut({ callbackUrl: "/autentificare" })}
-			variant="secondary"
-			className="h-11 gap-2 px-3"
+			variant="ghost"
+			className="h-7 gap-1 px-2 text-[8px]"
 		>
-			<LogOut className="size-4" />
-			<span className="hidden sm:inline">Iesire</span>
+			<LogOut className="size-3" />
+			<span className="hidden sm:inline">IESIRE</span>
 		</Button>
 	);
 }

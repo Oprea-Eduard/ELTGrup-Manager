@@ -1,19 +1,19 @@
 import { cn } from "@/src/lib/utils";
 
 const borderStyles: Record<string, string> = {
-	success: "border-[var(--success)] text-[var(--success)]",
-	warning: "border-[var(--warning)] text-[var(--warning)]",
-	danger: "border-[var(--accent)] text-[var(--accent)]",
-	neutral: "border-[var(--border-visible)] text-[var(--text-secondary)]",
-	info: "border-[var(--interactive)] text-[var(--interactive)]",
+	success: "border-[var(--green)] text-[var(--green)] bg-[var(--gb)]",
+	warning: "border-[var(--amber)] text-[var(--amber)] bg-[var(--ab)]",
+	danger: "border-[var(--red)] text-[var(--red)] bg-[var(--rb)]",
+	neutral: "border-[var(--b2)] text-[var(--t2)] bg-transparent",
+	info: "border-[var(--steel)] text-[var(--steel)] bg-[var(--sb)]",
 };
 
 const dotColors: Record<string, string> = {
-	success: "bg-[var(--success)]",
-	warning: "bg-[var(--warning)]",
-	danger: "bg-[var(--accent)]",
-	neutral: "bg-[var(--text-secondary)]",
-	info: "bg-[var(--interactive)]",
+	success: "bg-[var(--green)]",
+	warning: "bg-[var(--amber)]",
+	danger: "bg-[var(--red)]",
+	neutral: "bg-[var(--t2)]",
+	info: "bg-[var(--steel)]",
 };
 
 export function Badge({
@@ -31,13 +31,13 @@ export function Badge({
 		return (
 			<span
 				className={cn(
-					"inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]",
+					"inline-flex items-center gap-1.5 text-[8px] font-bold tracking-[1px] text-[var(--t2)]",
 					className,
 				)}
 			>
 				<span
 					className={cn(
-						"inline-block h-1.5 w-1.5 rounded-full",
+						"inline-block size-[5px] rounded-full",
 						dotColors[tone],
 					)}
 				/>
@@ -49,7 +49,7 @@ export function Badge({
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] leading-none",
+				"inline-flex items-center border px-1.5 py-[1px] text-[8px] font-bold tracking-[1px] leading-none",
 				borderStyles[tone],
 				className,
 			)}

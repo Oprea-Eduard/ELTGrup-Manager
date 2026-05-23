@@ -18,10 +18,10 @@ export function Table({
 	return (
 		<table
 			className={cn(
-				"w-full border-collapse text-sm",
-				"[&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border)]",
-				"[&_tbody_tr:hover]:bg-[var(--surface-raised)]",
-				compact && "[&_td]:py-1.5 [&_th]:py-1.5",
+				"w-full border-collapse",
+				"[&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--b1)]",
+				"[&_tbody_tr:hover]:bg-[rgba(255,255,255,0.013)]",
+				compact && "[&_td]:py-1 [&_th]:py-1.5",
 				className,
 			)}
 			{...rest}
@@ -41,7 +41,7 @@ export function TH({
 	return (
 		<th
 			className={cn(
-				"sticky top-0 z-[2] bg-[var(--surface)] px-3 py-2.5 text-left font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)] border-b border-[var(--border-visible)] lg:px-4",
+				"px-3 py-2 text-left text-[8px] font-bold tracking-[2px] text-[var(--t3)] border-b border-[var(--b1)] bg-[var(--s2)] sm:px-4",
 				className,
 			)}
 		>
@@ -60,7 +60,7 @@ export function TD({
 	return (
 		<td
 			className={cn(
-				"px-3 py-2.5 text-[var(--text-primary)] lg:px-4",
+				"px-3 py-2 text-[11px] text-[var(--t)] sm:px-4",
 				className,
 			)}
 		>
@@ -87,7 +87,7 @@ export function ExpandableRow({
 					<m.span
 						animate={{ rotate: isExpanded ? 180 : 0 }}
 						transition={{ duration: 0.2, ease: "easeOut" }}
-						className="flex size-5 items-center justify-center text-[var(--text-secondary)]"
+						className="flex size-5 items-center justify-center text-[var(--t2)]"
 					>
 						<ChevronDown size={14} />
 					</m.span>

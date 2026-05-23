@@ -10,15 +10,15 @@ export function EmptyState({
 	action?: { label: string; onClick: () => void };
 }) {
 	return (
-		<div className="dot-grid-subtle rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-8 text-center sm:p-10">
-			<p className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-display)]">
-				[ {title} ]
+		<div className="border border-[var(--b1)] bg-[var(--s1)] p-6 text-center sm:p-8">
+			<p className="text-[11px] font-bold tracking-[2px] text-[var(--t)]">
+				{title}
 			</p>
-			<p className="mt-2 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+			<p className="mt-1 text-[10px] text-[var(--t3)]">
 				{description}
 			</p>
 			{action && (
-				<div className="mt-6">
+				<div className="mt-4">
 					<Button onClick={action.onClick}>{action.label}</Button>
 				</div>
 			)}

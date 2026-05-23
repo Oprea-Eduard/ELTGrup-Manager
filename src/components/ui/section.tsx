@@ -15,19 +15,17 @@ export function Section({
 	className?: string;
 }) {
 	return (
-		<section className={cn("space-y-3", className)}>
+		<section className={cn("space-y-2", className)}>
 			{(title || actions) && (
-				<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex items-center justify-between gap-3 border-b border-[var(--b1)] px-3 py-2 sm:px-4">
 					<div>
 						{title && (
-							<h2 className="text-base font-medium text-[var(--text-display)]">
+							<h2 className="text-[9px] font-bold tracking-[2px] text-[var(--t2)]">
 								{title}
 							</h2>
 						)}
 						{description && (
-							<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-								{description}
-							</p>
+							<p className="text-[11px] text-[var(--t3)]">{description}</p>
 						)}
 					</div>
 					{actions && (

@@ -14,7 +14,7 @@ export function FgoSummaryCard({
 			</p>
 			<div className="grid grid-cols-3 gap-2 mb-3">
 				<div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-raised)] p-2 text-center">
-					<p className="font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--success)]">
+					<p className="font-mono text-[24px] font-medium leading-none tracking-tight text-[var(--success)]">
 						{stats.sent}
 					</p>
 					<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
@@ -22,7 +22,7 @@ export function FgoSummaryCard({
 					</p>
 				</div>
 				<div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-raised)] p-2 text-center">
-					<p className="font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--text-primary)]">
+					<p className="font-mono text-[24px] font-medium leading-none tracking-tight text-[var(--text-primary)]">
 						{stats.pending}
 					</p>
 					<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
@@ -30,7 +30,7 @@ export function FgoSummaryCard({
 					</p>
 				</div>
 				<div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-raised)] p-2 text-center">
-					<p className="font-doto text-[24px] font-medium leading-none tracking-tight text-[var(--accent)]">
+					<p className="font-mono text-[24px] font-medium leading-none tracking-tight text-[var(--accent)]">
 						{stats.errors}
 					</p>
 					<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">

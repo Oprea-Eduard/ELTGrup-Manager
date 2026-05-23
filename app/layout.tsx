@@ -1,6 +1,9 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Space_Mono, Doto } from "next/font/google";
+import {
+	Barlow_Condensed,
+	JetBrains_Mono,
+} from "next/font/google";
 import { Toaster } from "sonner";
 import { HeroUIRouterProvider } from "@/src/components/providers/heroui-provider";
 import { ReactQueryProvider } from "@/src/components/providers/react-query-provider";
@@ -8,22 +11,17 @@ import { SyncProvider } from "@/src/components/providers/sync-provider";
 import { ThemeProvider } from "@/src/components/providers/theme-provider";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const barlowCondensed = Barlow_Condensed({
 	subsets: ["latin", "latin-ext"],
-	variable: "--font-space-grotesk",
+	variable: "--font-barlow-condensed",
+	weight: ["400", "500", "600", "700", "800"],
 	display: "swap",
 });
 
-const spaceMono = Space_Mono({
+const jetbrainsMono = JetBrains_Mono({
 	subsets: ["latin", "latin-ext"],
-	variable: "--font-space-mono",
-	weight: ["400", "700"],
-	display: "swap",
-});
-
-const doto = Doto({
-	subsets: ["latin", "latin-ext"],
-	variable: "--font-doto",
+	variable: "--font-jetbrains-mono",
+	weight: ["400", "500"],
 	display: "swap",
 });
 
@@ -51,8 +49,8 @@ export const viewport: Viewport = {
 	initialScale: 1,
 	viewportFit: "cover",
 	themeColor: [
-		{ media: "(prefers-color-scheme: dark)", color: "#000000" },
-		{ media: "(prefers-color-scheme: light)", color: "#F5F5F5" },
+		{ media: "(prefers-color-scheme: dark)", color: "#0b0c0f" },
+		{ media: "(prefers-color-scheme: light)", color: "#f0eee8" },
 	],
 	colorScheme: "dark light",
 };
@@ -63,7 +61,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang="ro"
-			className={`${spaceGrotesk.variable} ${spaceMono.variable} ${doto.variable}`}
+			className={`${barlowCondensed.variable} ${jetbrainsMono.variable}`}
 			suppressHydrationWarning
 		>
 			<body className="antialiased">

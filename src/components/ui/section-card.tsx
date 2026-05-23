@@ -17,7 +17,7 @@ export function SectionCard({
 	const spacingMap = { sm: "px-4 py-1", md: "px-5 py-2", lg: "px-6 py-3" };
 
 	return (
-		<div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+		<div className="border border-[var(--border-visible)] bg-[var(--surface)]">
 			{(title || action) && (
 				<div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
 					<div>
@@ -59,7 +59,7 @@ export function SectionCardSimple({
 	return (
 		<div
 			className={cn(
-				"rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]",
+				"border border-[var(--border-visible)] bg-[var(--surface)]",
 				className,
 			)}
 		>

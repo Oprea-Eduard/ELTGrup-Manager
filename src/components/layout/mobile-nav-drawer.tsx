@@ -53,14 +53,16 @@ export function MobileNavDrawer({
 			)}
 
 			<aside className={cn(
-				"fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border)] bg-[var(--black)] transition-transform duration-200",
+				"fixed left-0 top-0 z-50 flex h-dvh w-[300px] max-w-[85vw] flex-col border-r border-[var(--border-visible)] bg-[var(--black)] transition-transform duration-200",
 				isOpen ? "translate-x-0" : "-translate-x-full",
 			)}>
-				<div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-					<div>
-						<p className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--accent)]">
-							ELTGRUP
-						</p>
+				<div className="flex items-center justify-between border-b border-[var(--border-visible)] px-5 py-4">
+					<div className="flex items-center gap-2">
+						<span className="flex size-7 items-center justify-center bg-[var(--accent)] font-sans text-[12px] font-bold text-[#0B0C0F]">EG</span>
+						<div>
+							<p className="font-sans text-[13px] font-bold uppercase tracking-[0.1em] text-[var(--text-display)]">ELT GRUP</p>
+							<p className="font-mono text-[8px] uppercase tracking-[0.12em] text-[var(--text-secondary)]">MANAGER</p>
+						</div>
 					</div>
 					<Button
 						size="icon"
@@ -97,7 +99,7 @@ export function MobileNavDrawer({
 												href={item.href}
 												onClick={handleClose}
 												className={cn(
-													"flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors",
+													"flex items-center gap-3 px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors",
 													active
 														? "text-[var(--text-display)]"
 														: "text-[var(--text-disabled)] hover:text-[var(--text-primary)]",

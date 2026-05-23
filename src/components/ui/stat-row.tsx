@@ -20,21 +20,21 @@ export function StatRow({
 				className,
 			)}
 		>
-			<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+			<span className="text-[9px] font-bold tracking-[2px] text-[var(--t3)]">
 				{label}
 			</span>
 			<span
 				className={cn(
-					"font-mono tabular-nums text-sm",
-					muted ? "text-[var(--text-secondary)]" : "text-[var(--text-primary)]",
+					"font-mono text-[11px]",
+					muted ? "text-[var(--t2)]" : "text-[var(--t)]",
 				)}
 			>
 				{value}
 				{trend === "up" && (
-					<span className="ml-1 text-xs text-[var(--success)]">↑</span>
+					<span className="ml-1 text-xs text-[var(--green)]">↑</span>
 				)}
 				{trend === "down" && (
-					<span className="ml-1 text-xs text-[var(--accent)]">↓</span>
+					<span className="ml-1 text-xs text-[var(--red)]">↓</span>
 				)}
 			</span>
 		</div>

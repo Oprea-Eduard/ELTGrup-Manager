@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/src/components/ui/badge";
+import { cn } from "@/src/lib/utils";
 
 const timelineDateFormatter = new Intl.DateTimeFormat("ro-RO", {
 	dateStyle: "medium",
@@ -22,8 +23,8 @@ function formatTimelineDate(value: Date) {
 
 export function ActivityTimeline({
 	events,
-	emptyTitle = "Nu exista evenimente",
-	emptyDescription = "Activitatea va aparea aici dupa primele operatiuni.",
+	emptyTitle = "NU EXISTA EVENIMENTE",
+	emptyDescription = "ACTIVITATEA VA APAREA AICI DUPA PRIMELE OPERATIUNI.",
 }: {
 	events: TimelineEvent[];
 	emptyTitle?: string;
@@ -31,48 +32,52 @@ export function ActivityTimeline({
 }) {
 	if (events.length === 0) {
 		return (
-			<div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4">
-				<p className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-display)]">
-					[ {emptyTitle} ]
+			<div className="border border-[var(--b1)] bg-[var(--s1)] p-3 sm:p-4">
+				<p className="text-[10px] font-bold tracking-[1.5px] text-[var(--t)]">
+					{emptyTitle}
 				</p>
-				<p className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
-					{emptyDescription}
-				</p>
+				<p className="mt-1 text-[9px] text-[var(--t3)]">{emptyDescription}</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-0">
 			{events.map((event) => (
 				<div
 					key={event.id}
-					className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-3"
+					className="flex items-start gap-2 border-b border-[var(--b1)] px-3 py-2 last:border-b-0 sm:px-4"
 				>
-					<div className="flex items-center justify-between gap-3">
-						<p className="text-sm font-medium text-[var(--text-display)]">
+					<span className="font-mono text-[8px] text-[var(--t3)] shrink-0 w-[30px] pt-[2px]">
+						{formatTimelineDate(event.at)}
+					</span>
+					<div
+						className={cn(
+							"mt-[3px] size-[4px] shrink-0 rounded-full",
+							event.tone === "danger"
+								? "bg-[var(--red)]"
+								: event.tone === "warning"
+									? "bg-[var(--amber)]"
+									: event.tone === "success"
+										? "bg-[var(--green)]"
+										: "bg-[var(--steel)]",
+						)}
+					/>
+					<div className="flex-1">
+						<p className="text-[10px] leading-[1.4] text-[var(--t2)]">
 							{event.title}
 						</p>
-						<Badge tone={event.tone || "neutral"}>{event.category}</Badge>
 					</div>
-					{event.detail ? (
-						<p className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
-							{event.detail}
-						</p>
-					) : null}
-					<div className="mt-2 flex items-center justify-between gap-3">
-						<p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--text-secondary)]">
-							{formatTimelineDate(event.at)}
-						</p>
+					<span className="font-mono text-[8px] text-[var(--t3)] shrink-0">
 						{event.href ? (
 							<Link
-								className="font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--interactive)] hover:text-[var(--text-display)] transition-colors"
 								href={event.href}
+								className="text-[var(--amber)] hover:text-[var(--t)] transition-colors"
 							>
-								[DESCHIDE]
+								{event.detail}
 							</Link>
 						) : null}
-					</div>
+					</span>
 				</div>
 			))}
 		</div>
